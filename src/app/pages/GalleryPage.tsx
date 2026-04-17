@@ -401,16 +401,16 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                         <p>{project.description || '이 작품에 대한 상세 설명이 아직 등록되지 않았습니다.'}</p>
                     </div>
 
-                    <div className="flex mt-12 pt-10 border-t border-black/10 items-center gap-4 flex-wrap">
-                        <button onClick={onClose} title="Return" className="interactive-el flex items-center justify-center px-8 h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
-                            <Grid size={18} /> View All Works
+                    <div className="flex mt-12 pt-10 border-t border-black/10 items-center justify-between w-full flex-nowrap shrink-0">
+                        <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
+                            <Grid size={18} /> <span className="hidden sm:inline">View All Works</span><span className="sm:hidden">Home</span>
                         </button>
-                        <div className="flex gap-2">
-                            <button onClick={prevProject} className="interactive-el flex items-center justify-center w-14 h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
-                                <ArrowLeft size={20} />
+                        <div className="flex gap-2 shrink-0">
+                            <button onClick={prevProject} className="interactive-el flex items-center justify-center w-12 h-12 lg:w-14 lg:h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
+                                <ArrowLeft size={18} />
                             </button>
-                            <button onClick={nextProject} className="interactive-el flex items-center justify-center w-14 h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
-                                <ArrowRight size={20} />
+                            <button onClick={nextProject} className="interactive-el flex items-center justify-center w-12 h-12 lg:w-14 lg:h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
+                                <ArrowRight size={18} />
                             </button>
                         </div>
                     </div>
@@ -571,21 +571,21 @@ export default function GalleryPage() {
         scene.add(galleryGroup);
         galleryGroupRef.current = galleryGroup;
 
-        // Space Theme: Stars
+        // Space Theme: Stars (Increased visibility)
         const starsGeometry = new THREE.BufferGeometry();
         const starsVertices = [];
         const starsColors = [];
         const colorObj = new THREE.Color();
-        for(let i=0; i<3000; i++) {
+        for(let i=0; i<6000; i++) {
             starsVertices.push((Math.random() - 0.5) * 400, (Math.random() - 0.5) * 400, (Math.random() - 0.5) * 400);
             const mix = Math.random();
-            colorObj.setHSL(0.6 + mix * 0.2, 0.8, 0.5 + Math.random() * 0.5); // bluish to pinkish hints
-            if(Math.random() > 0.8) colorObj.setHex(0xffffff);
+            colorObj.setHSL(0.6 + mix * 0.2, 0.8, 0.5 + Math.random() * 0.5); 
+            if(Math.random() > 0.6) colorObj.setHex(0xffffff); // More pure white stars
             starsColors.push(colorObj.r, colorObj.g, colorObj.b);
         }
         starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
         starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starsColors, 3));
-        const starsMaterial = new THREE.PointsMaterial({size: 0.3, vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending});
+        const starsMaterial = new THREE.PointsMaterial({size: 0.6, vertexColors: true, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending});
         const starField = new THREE.Points(starsGeometry, starsMaterial);
         scene.add(starField);
 
@@ -607,6 +607,9 @@ export default function GalleryPage() {
             dragInfo.current.velocityY *= 0.95;
             dragInfo.current.targetRotationY += dragInfo.current.velocityX;
             dragInfo.current.targetRotationX += dragInfo.current.velocityY;
+
+            // Clamp X rotation to prevent the scene from flipping upside down (which causes a bouncing/reversing sensation)
+            dragInfo.current.targetRotationX = THREE.MathUtils.clamp(dragInfo.current.targetRotationX, -Math.PI / 3, Math.PI / 3);
 
             if (!dragInfo.current.isDragging) {
                 dragInfo.current.targetRotationY += 0.0015;
@@ -663,11 +666,13 @@ export default function GalleryPage() {
         const textureLoader = new THREE.TextureLoader();
         textureLoader.crossOrigin = "Anonymous";
 
+        const isMobile = window.innerWidth < 768;
+        const currentItemHeight = isMobile ? ITEM_HEIGHT * 0.6 : ITEM_HEIGHT;
         const totalItems = Math.max(projects.length, 1);
 
         projects.forEach((proj, i) => {
             const material = new THREE.MeshBasicMaterial({ color: 0x888888, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-            const geometry = new THREE.PlaneGeometry(ITEM_HEIGHT, ITEM_HEIGHT, 32, 32); 
+            const geometry = new THREE.PlaneGeometry(currentItemHeight, currentItemHeight, 32, 32); 
             const mesh = new THREE.Mesh(geometry, material);
 
             let targetUrl = proj.imageUrl;
@@ -692,8 +697,10 @@ export default function GalleryPage() {
 
             const phi = Math.acos(1 - 2 * (i + 0.5) / totalItems);
             const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-            // Radius depends on total items to fit well
-            const radius = 15 + Math.random() * 10; 
+            // Radius depends on total items to fit well. Tighter on mobile.
+            const radiusBase = isMobile ? 6 : 15;
+            const radiusSpread = isMobile ? 6 : 10;
+            const radius = radiusBase + Math.random() * radiusSpread; 
 
             mesh.position.x = radius * Math.sin(phi) * Math.cos(theta);
             mesh.position.y = radius * Math.cos(phi);
