@@ -403,7 +403,7 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                     <div className="text-sm font-bold text-[#ff3366] mb-4 uppercase tracking-[2px]" style={{ fontFamily: fontFamilyMono }}>
                         {project.date || '2026.04'} / {project.category}
                     </div>
-                    <h2 className={`text-[clamp(40px,5vw,80px)] ${project.location ? 'mb-2' : 'mb-10'} font-bold uppercase leading-[1.1] tracking-tighter text-black`}>
+                    <h2 className={`text-[clamp(40px,5vw,80px)] ${project.location ? 'mb-2' : 'mb-10'} font-bold uppercase leading-[1.1] tracking-tighter text-black`} style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}>
                         {project.title}
                     </h2>
                     {project.location && (
@@ -412,13 +412,13 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                         </div>
                     )}
                     
-                    <div className="space-y-6 max-w-[600px] text-lg text-[#333] leading-[1.8]" style={{ fontFamily: fontFamilyMono }}>
+                    <div className="space-y-6 max-w-[600px] text-lg text-[#333] leading-[1.8]" style={{ fontFamily: "'Noto Sans KR', 'Noto Sans', sans-serif" }}>
                         <p>{project.description || '이 작품에 대한 상세 설명이 아직 등록되지 않았습니다.'}</p>
                     </div>
 
                     <div className="hidden lg:flex mt-12 pt-10 border-t border-black/10 items-center justify-between w-full flex-nowrap shrink-0">
                         <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
-                            <Grid size={18} /> <span className="hidden sm:inline">View All Works</span><span className="sm:hidden">Home</span>
+                            <Grid size={18} /> <span>HOME</span>
                         </button>
                         <div className="flex gap-2 shrink-0">
                             <button onClick={prevProject} className="interactive-el flex items-center justify-center w-12 h-12 lg:w-14 lg:h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
