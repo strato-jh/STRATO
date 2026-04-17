@@ -99,12 +99,12 @@ function PageGallery({ isActive, projects, onSelectProject, isUnlocked, onReques
         >
             {isActive && (
                 <div className="w-full max-w-[1400px] mx-auto pb-20">
-                    <div className="flex flex-wrap gap-4 mb-10 border-b border-white/10 pb-6">
+                    <div className="flex overflow-x-auto hide-scrollbar gap-2 md:gap-4 mb-10 border-b border-white/10 pb-6 w-full px-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                         {categories.map(c => (
                             <button
                                 key={c}
                                 onClick={() => setFilter(c)}
-                                className={`interactive-el text-sm font-bold uppercase tracking-widest px-6 py-3 border transition-all rounded-[30px] cursor-pointer ${filter === c ? 'border-white text-black bg-white' : 'border-white/20 text-white hover:text-white hover:border-white'}`}
+                                className={`interactive-el text-[10px] md:text-sm font-bold uppercase tracking-widest px-4 py-2 md:px-6 md:py-3 border transition-all rounded-[30px] cursor-pointer shrink-0 ${filter === c ? 'border-white text-black bg-white' : 'border-white/20 text-white hover:text-white hover:border-white'}`}
                             >
                                 {c}
                             </button>
@@ -403,16 +403,16 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                     <div className="text-sm font-bold text-[#ff3366] mb-4 uppercase tracking-[2px]" style={{ fontFamily: fontFamilyMono }}>
                         {project.date || '2026.04'} / {project.category}
                     </div>
-                    <h2 className={`text-[clamp(40px,5vw,80px)] ${project.location ? 'mb-2' : 'mb-10'} font-bold uppercase leading-[1.1] tracking-tighter text-black`} style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}>
+                    <h2 className={`text-[clamp(20px,2.5vw,40px)] ${project.location ? 'mb-2' : 'mb-6 md:mb-10'} font-semibold uppercase leading-[1.1] tracking-tighter text-black truncate w-full`} style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}>
                         {project.title}
                     </h2>
                     {project.location && (
-                        <div className="text-sm text-black/50 mb-10 font-medium uppercase tracking-wide flex items-center gap-1">
+                        <div className="text-xs md:text-sm text-black/50 mb-6 md:mb-10 font-medium uppercase tracking-wide flex items-center gap-1">
                             <MapPin size={14} /> {project.location}
                         </div>
                     )}
                     
-                    <div className="space-y-6 max-w-[600px] text-lg text-[#333] leading-[1.8]" style={{ fontFamily: "'Noto Sans KR', 'Noto Sans', sans-serif" }}>
+                    <div className="space-y-4 md:space-y-6 max-w-full md:max-w-[600px] text-sm md:text-lg text-[#333] leading-[1.8] truncate" style={{ fontFamily: "'Noto Sans KR', 'Noto Sans', sans-serif" }}>
                         <p>{project.description || '이 작품에 대한 상세 설명이 아직 등록되지 않았습니다.'}</p>
                     </div>
 
