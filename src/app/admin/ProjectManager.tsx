@@ -18,7 +18,8 @@ interface Project {
     description: string;
     imageUrl: string;
     thumbnailUrl?: string;
-    mediaType: 'image' | 'video';
+    mediaType: 'image' | 'video' | 'youtube';
+    youtubeUrl?: string;
     isRestricted: boolean;
     category: string;
     date: string;
@@ -60,6 +61,7 @@ export default function ProjectManager() {
         imageUrl: '',
         thumbnailUrl: '',
         mediaType: 'image',
+        youtubeUrl: '',
         isRestricted: false,
         category: 'FASHION',
         date: '2025.10 — 2026.03',
@@ -89,13 +91,13 @@ export default function ProjectManager() {
                 setEditForm({
                     ...editForm,
                     imageUrl: result,
-                    mediaType: isImage ? 'image' : 'video'
+                    mediaType: editForm.mediaType === 'youtube' ? 'youtube' : (isImage ? 'image' : 'video')
                 });
             } else {
                 setNewProject({
                     ...newProject,
                     imageUrl: result,
-                    mediaType: isImage ? 'image' : 'video'
+                    mediaType: newProject.mediaType === 'youtube' ? 'youtube' : (isImage ? 'image' : 'video')
                 });
             }
         };
@@ -206,6 +208,7 @@ export default function ProjectManager() {
                     imageUrl: finalImageUrl,
                     thumbnailUrl: editForm.mediaType === 'video' ? finalThumbnailUrl : '',
                     mediaType: editForm.mediaType,
+                    youtubeUrl: editForm.mediaType === 'youtube' ? editForm.youtubeUrl : '',
                     isRestricted: editForm.isRestricted,
                     category: editForm.category,
                     date: editForm.date,
@@ -280,6 +283,7 @@ export default function ProjectManager() {
                 imageUrl: finalImageUrl,
                 thumbnailUrl: newProject.mediaType === 'video' ? finalThumbnailUrl : '',
                 mediaType: newProject.mediaType,
+                youtubeUrl: newProject.mediaType === 'youtube' ? newProject.youtubeUrl : '',
                 isRestricted: newProject.isRestricted,
                 category: newProject.category,
                 date: newProject.date,
@@ -296,6 +300,7 @@ export default function ProjectManager() {
                 imageUrl: '',
                 thumbnailUrl: '',
                 mediaType: 'image',
+                youtubeUrl: '',
                 isRestricted: false,
                 category: 'FASHION',
                 date: '2025.10 — 2026.03',
@@ -482,10 +487,32 @@ export default function ProjectManager() {
 
                             {/* Form */}
                             <div className="p-6 space-y-6">
+                                {/* Media Type Switch */}
+                                <div>
+                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
+                                        &gt; Media Source
+                                    </label>
+                                    <div className="flex gap-6 mb-4 mt-2">
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={newProject.mediaType !== 'youtube'} onChange={() => setNewProject({ ...newProject, mediaType: 'image' })} /> Direct Upload (Image/Video)</label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={newProject.mediaType === 'youtube'} onChange={() => setNewProject({ ...newProject, mediaType: 'youtube' })} /> YouTube Link</label>
+                                    </div>
+                                </div>
+
+                                {/* YouTube Input */}
+                                {newProject.mediaType === 'youtube' && (
+                                    <div>
+                                        <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
+                                            &gt; YouTube URL
+                                        </label>
+                                        <input type="text" value={newProject.youtubeUrl || ''} onChange={(e) => setNewProject({ ...newProject, youtubeUrl: e.target.value })} className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all font-mono text-sm" placeholder="e.g. https://www.youtube.com/watch?v=..." />
+                                        <p className="text-xs text-[#ff3366] mt-2">A YouTube link reduces server load. Please also provide a Thumbnail Image below for the 3D space.</p>
+                                    </div>
+                                )}
+
                                 {/* File Upload */}
                                 <div>
                                     <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Upload Image or Video
+                                        &gt; {newProject.mediaType === 'youtube' ? 'Upload 3D Thumbnail Image' : 'Upload Image or Video'}
                                     </label>
                                     <div className="border-2 border-dashed border-white/30 p-6 text-center hover:border-white/50 transition-colors">
                                         <input
@@ -742,10 +769,32 @@ export default function ProjectManager() {
 
                             {/* Form */}
                             <div className="p-6 space-y-6">
+                                {/* Media Type Switch */}
+                                <div>
+                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
+                                        &gt; Media Source
+                                    </label>
+                                    <div className="flex gap-6 mb-4 mt-2">
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={editForm.mediaType !== 'youtube'} onChange={() => setEditForm({ ...editForm, mediaType: 'image' })} /> Direct Upload (Image/Video)</label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={editForm.mediaType === 'youtube'} onChange={() => setEditForm({ ...editForm, mediaType: 'youtube' })} /> YouTube Link</label>
+                                    </div>
+                                </div>
+
+                                {/* YouTube Input */}
+                                {editForm.mediaType === 'youtube' && (
+                                    <div>
+                                        <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
+                                            &gt; YouTube URL
+                                        </label>
+                                        <input type="text" value={editForm.youtubeUrl || ''} onChange={(e) => setEditForm({ ...editForm, youtubeUrl: e.target.value })} className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all font-mono text-sm" placeholder="e.g. https://www.youtube.com/watch?v=..." />
+                                        <p className="text-xs text-[#ff3366] mt-2">A YouTube link reduces server load. Please ensure a Thumbnail Image is uploaded for the 3D space.</p>
+                                    </div>
+                                )}
+
                                 {/* Current Media Preview */}
                                 <div>
                                     <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Current Media
+                                        &gt; Current Thumbnail / Media
                                     </label>
                                     <div className="aspect-[4/5] max-w-xs bg-black border-2 border-white/20">
                                         {editForm.mediaType === 'video' ? (

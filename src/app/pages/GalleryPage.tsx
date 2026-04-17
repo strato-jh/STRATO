@@ -3,7 +3,14 @@ import { Link } from 'react-router';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'motion/react';
-import { Key, X, Grid, Lock, MapPin, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Key, X, Grid, Lock, MapPin, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight, Play } from 'lucide-react';
+
+const getYouTubeId = (url: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+};
 import { doc, getDoc, collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -130,6 +137,13 @@ function PageGallery({ isActive, projects, onSelectProject, isUnlocked, onReques
                                     <div className="w-full aspect-[4/5] relative">
                                         {p.mediaType === 'video' ? (
                                             <video src={p.imageUrl} poster={p.thumbnailUrl || p.imageUrl} preload="none" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" muted loop playsInline onMouseEnter={e => e.currentTarget.play()} onMouseLeave={e => e.currentTarget.pause()} />
+                                        ) : p.mediaType === 'youtube' ? (
+                                            <div className="w-full h-full relative">
+                                                <img src={p.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                                <div className="absolute inset-0 flex items-center justify-center p-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                                                    <Play size={48} className="text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] fill-white/20" />
+                                                </div>
+                                            </div>
                                         ) : (
                                             <img src={p.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                         )}
@@ -291,6 +305,8 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
         const media = [];
         if (project.mediaType === 'video') {
             media.push({ type: 'video', url: project.imageUrl, thumbnail: project.thumbnailUrl });
+        } else if (project.mediaType === 'youtube') {
+            media.push({ type: 'youtube', url: project.youtubeUrl, thumbnail: project.imageUrl });
         } else {
             media.push({ type: 'image', url: project.imageUrl });
         }
@@ -357,6 +373,13 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                             >
                                 {currentMedia.type === 'video' ? (
                                     <video src={currentMedia.url} poster={currentMedia.thumbnail} autoPlay loop muted playsInline className="w-full h-auto max-h-[80vh] object-contain snap-center" />
+                                ) : currentMedia.type === 'youtube' ? (
+                                    <iframe 
+                                        src={`https://www.youtube.com/embed/${getYouTubeId(currentMedia.url || '')}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeId(currentMedia.url || '')}`}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        className="w-full aspect-video h-auto max-h-[80vh] border-none bg-black rounded-[20px]"
+                                    />
                                 ) : (
                                     <img src={currentMedia.url} className="w-full h-auto max-h-[80vh] object-contain snap-center" alt="" />
                                 )}
@@ -452,6 +475,13 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                                     ) : (
                                         <video src={p.imageUrl} className="w-full h-full object-cover" preload="metadata" />
                                     )
+                                ) : p.mediaType === 'youtube' ? (
+                                    <div className="w-full h-full relative">
+                                        <img src={p.imageUrl} className="w-full h-full object-cover" alt="" />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                            <Play size={24} className="text-white drop-shadow-md fill-white/80" />
+                                        </div>
+                                    </div>
                                 ) : (
                                     <img src={p.imageUrl} className="w-full h-full object-cover" alt="" />
                                 )}
