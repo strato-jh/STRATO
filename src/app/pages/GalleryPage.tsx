@@ -604,6 +604,8 @@ export default function GalleryPage() {
         const starField = new THREE.Points(starsGeometry, starsMaterial);
         scene.add(starField);
 
+        const targetQuat = new THREE.Quaternion();
+
         // Space Theme: Nebula Dust
         const dustGeometry = new THREE.BufferGeometry();
         const dustVertices = [];
@@ -620,19 +622,18 @@ export default function GalleryPage() {
 
             dragInfo.current.velocityX *= 0.95;
             dragInfo.current.velocityY *= 0.95;
-            dragInfo.current.targetRotationY += dragInfo.current.velocityX;
-            dragInfo.current.targetRotationX += dragInfo.current.velocityY;
 
-            // Clamp X rotation to prevent the scene from flipping upside down (which causes a bouncing/reversing sensation)
-            dragInfo.current.targetRotationX = THREE.MathUtils.clamp(dragInfo.current.targetRotationX, -Math.PI / 3, Math.PI / 3);
+            const deltaY = dragInfo.current.velocityX + (!dragInfo.current.isDragging ? 0.0015 : 0);
+            const deltaX = dragInfo.current.velocityY;
 
-            if (!dragInfo.current.isDragging) {
-                dragInfo.current.targetRotationY += 0.0015;
+            if (deltaX !== 0 || deltaY !== 0) {
+                const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), deltaX);
+                const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), deltaY);
+                targetQuat.premultiply(qX).premultiply(qY);
             }
 
             if (galleryGroupRef.current) {
-                galleryGroupRef.current.rotation.y = THREE.MathUtils.lerp(galleryGroupRef.current.rotation.y, dragInfo.current.targetRotationY, 0.1);
-                galleryGroupRef.current.rotation.x = THREE.MathUtils.lerp(galleryGroupRef.current.rotation.x, dragInfo.current.targetRotationX, 0.1);
+                galleryGroupRef.current.quaternion.slerp(targetQuat, 0.1);
             }
 
             starField.rotation.y += 0.0005;
