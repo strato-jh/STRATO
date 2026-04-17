@@ -89,7 +89,7 @@ function PageGallery({ isActive, projects, onSelectProject, isUnlocked, onReques
     if (filter === 'LOCKED') {
         filtered = projects.filter((p: any) => p.isRestricted);
     } else {
-        filtered = projects.filter((p: any) => !p.isRestricted && (filter === 'ALL' || p.category === filter || (filter === 'OTHER' && p.category === 'ENT')));
+        filtered = projects.filter((p: any) => (!p.isRestricted || isUnlocked) && (filter === 'ALL' || p.category === filter || (filter === 'OTHER' && p.category === 'ENT')));
     }
 
     return (
@@ -898,7 +898,7 @@ export default function GalleryPage() {
     const handleUnlockSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (inputCode === 'strato2026') {
+        if (inputCode === 'strato001') {
             setIsUnlocked(true);
             setShowCodeModal(false);
             setInputCode('');
