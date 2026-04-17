@@ -24,7 +24,7 @@ function CustomCursor() {
     }, []);
 
     return (
-        <div ref={cursorRef} className="fixed top-0 left-0 pointer-events-none z-[9999] will-change-transform">
+        <div ref={cursorRef} className="hidden md:block fixed top-0 left-0 pointer-events-none z-[9999] will-change-transform">
             <div id="cursor-inner" className="relative -top-1 -left-1 transition-transform duration-300 ease-out origin-top-left">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="#ff3366" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
                     <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
@@ -553,7 +553,8 @@ export default function GalleryPage() {
 
         const container = canvasContainerRef.current;
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050505, 0.02);
+        scene.fog = new THREE.FogExp2(0x020108, 0.015);
+        scene.background = new THREE.Color(0x020108);
         sceneRef.current = scene;
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -570,16 +571,34 @@ export default function GalleryPage() {
         scene.add(galleryGroup);
         galleryGroupRef.current = galleryGroup;
 
-        // Stars
+        // Space Theme: Stars
         const starsGeometry = new THREE.BufferGeometry();
         const starsVertices = [];
-        for(let i=0; i<1500; i++) {
-            starsVertices.push((Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300);
+        const starsColors = [];
+        const colorObj = new THREE.Color();
+        for(let i=0; i<3000; i++) {
+            starsVertices.push((Math.random() - 0.5) * 400, (Math.random() - 0.5) * 400, (Math.random() - 0.5) * 400);
+            const mix = Math.random();
+            colorObj.setHSL(0.6 + mix * 0.2, 0.8, 0.5 + Math.random() * 0.5); // bluish to pinkish hints
+            if(Math.random() > 0.8) colorObj.setHex(0xffffff);
+            starsColors.push(colorObj.r, colorObj.g, colorObj.b);
         }
         starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-        const starsMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 0.2, transparent: true, opacity: 0.6});
+        starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starsColors, 3));
+        const starsMaterial = new THREE.PointsMaterial({size: 0.3, vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending});
         const starField = new THREE.Points(starsGeometry, starsMaterial);
         scene.add(starField);
+
+        // Space Theme: Nebula Dust
+        const dustGeometry = new THREE.BufferGeometry();
+        const dustVertices = [];
+        for(let i=0; i<200; i++) {
+            dustVertices.push((Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150);
+        }
+        dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
+        const dustMaterial = new THREE.PointsMaterial({color: 0x331166, size: 20, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending});
+        const dustField = new THREE.Points(dustGeometry, dustMaterial);
+        scene.add(dustField);
 
         const animate = () => {
             animationFrameId.current = requestAnimationFrame(animate);
@@ -929,9 +948,9 @@ export default function GalleryPage() {
     };
 
     return (
-        <div style={{ fontFamily: fontFamilySans }} className="relative w-full h-screen bg-[#050505] text-[#f0f0f0] overflow-hidden cursor-none selection:bg-[#ff3366] selection:text-white">
+        <div style={{ fontFamily: fontFamilySans }} className="relative w-full h-screen bg-[#020108] text-[#f0f0f0] overflow-hidden cursor-auto md:cursor-none selection:bg-[#ff3366] selection:text-white">
             <style dangerouslySetInnerHTML={{__html: `
-                body { cursor: none; }
+                @media (pointer: fine) { body { cursor: none; } }
                 body.cursor-hover #cursor-inner { transform: scale(1.3) !important; }
                 body.cursor-scale-down #cursor-inner { transform: scale(0.8) !important; }
             `}} />
