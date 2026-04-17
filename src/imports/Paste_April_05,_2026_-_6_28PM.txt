@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spatial & Interactive Gallery</title>
+    <!-- 폰트 로드: 네오 브루탈리즘 느낌의 Sans-serif와 HUD용 Monospace -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Three.js 및 GSAP 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #f0f0f0;
+            --accent-color: #ff3366;
+            --font-sans: 'Space Grotesk', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-sans);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            cursor: none; /* 커스텀 커서 사용을 위해 기본 커서 숨김 */
+        }
+
+        /* --- Custom Cursor --- */
+        #cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background-color 0.3s;
+            mix-blend-mode: difference;
+        }
+        #cursor.hover {
+            width: 40px;
+            height: 40px;
+            background-color: transparent;
+            border: 1px solid white;
+        }
+
+        /* --- HUD Elements (마이크로 카피) --- */
+        .hud {
+            position: fixed;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .hud-top-left { top: 20px; left: 20px; }
+        .hud-top-right { top: 20px; right: 20px; text-align: right; }
+        .hud-bottom-left { bottom: 20px; left: 20px; }
+        .hud-bottom-right { bottom: 20px; right: 20px; text-align: right; }
+
+        .hud strong {
+            color: white;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* --- Floating Nav (알약 형태) --- */
+        #nav-pill {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            display: flex;
+            padding: 5px;
+            z-index: 200;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn.active {
+            background: white;
+            color: black;
+        }
+
+        /* --- WebGL Canvas --- */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        /* --- HTML Pages (SPA) --- */
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            padding: 100px 5vw;
+            overflow-y: auto;
+        }
+        .page.active {
+            pointer-events: auto;
+        }
+
+        /* About Page Styles */
+        #page-about {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .huge-title {
+            font-size: clamp(40px, 8vw, 120px);
+            font-weight: 700;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            margin-bottom: 20px;
+        }
+        .about-desc {
+            font-family: var(--font-mono);
+            font-size: clamp(14px, 2vw, 20px);
+            max-width: 600px;
+            color: #aaa;
+            line-height: 1.5;
+        }
+
+        /* Contact Page Styles (Image Reveal) */
+        #page-contact {
+            justify-content: center;
+        }
+        .contact-list {
+            list-style: none;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .contact-item {
+            font-size: clamp(40px, 6vw, 100px);
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.3);
+            transition: color 0.3s;
+            position: relative;
+        }
+        .contact-item .link-text {
+            color: inherit;
+            text-decoration: none;
+            display: block; /* 전체 영역(여백 포함) 클릭 가능하도록 블록 처리 */
+            width: 100%;
+            padding: 20px 0;
+            cursor: pointer;
+        }
+        .contact-item:hover {
+            color: white;
+        }
+        
+        /* Contact Form Page */
+        #page-mail-form {
+            justify-content: center;
+            align-items: center;
+        }
+        .mail-form-container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            pointer-events: auto;
+        }
+        .form-header {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .form-group {
+            margin-bottom: 30px;
+        }
+        .form-group label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 0;
+            color: white;
+            font-family: var(--font-sans);
+            font-size: 20px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            border-bottom-color: white;
+        }
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 20px;
+            font-family: var(--font-sans);
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 10px;
+            border: none;
+            transition: all 0.3s;
+        }
+        .send-btn {
+            background: white;
+            color: black;
+        }
+        .send-btn:hover {
+            background: var(--accent-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .cancel-btn {
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Detail Page (Hero Expansion Target) */
+        #page-detail {
+            background-color: #f0f0f0;
+            color: #050505;
+            z-index: 50; /* 가장 위에 표시 */
+        }
+        .detail-header {
+            width: 100%;
+            height: 60vh;
+            background-color: #ddd;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            background-size: cover;
+            background-position: center;
+        }
+        .detail-content h2 {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+        .close-btn {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            padding: 12px 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 60;
+            display: none;
+            transition: all 0.3s ease;
+        }
+        .close-btn:hover {
+            background: white;
+            color: black;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 커스텀 커서 -->
+    <div id="cursor"></div>
+
+    <!-- HUD (Heads-Up Display) -->
+    <div class="hud hud-top-left">
+        <strong>AGENCY®</strong>
+        SYS_STATUS: ONLINE<br>
+        VER: 2.0.4 / ALPHA
+    </div>
+    <div class="hud hud-top-right">
+        <strong id="hud-clock">00:00:00</strong>
+        LOC: SEOUL, KR<br>
+        COORD: 37.5665° N, 126.9780° E
+    </div>
+    <div class="hud hud-bottom-left">
+        DRAG TO PAN<br>
+        SCROLL TO ZOOM<br>
+        CLICK TO EXPAND
+    </div>
+    <div class="hud hud-bottom-right">
+        EXPERIMENTAL<br>
+        SPATIAL ENGINE ACTIVE<br>
+        SPA ARCHITECTURE
+    </div>
+
+    <!-- 플로팅 내비게이션 -->
+    <nav id="nav-pill">
+        <button class="nav-btn active" data-target="work">Work</button>
+        <button class="nav-btn" data-target="about">About</button>
+        <button class="nav-btn" data-target="contact">Contact</button>
+    </nav>
+
+    <!-- 3D 갤러리 캔버스 컨테이너 -->
+    <div id="canvas-container"></div>
+
+    <!-- 페이지: About -->
+    <div id="page-about" class="page">
+        <div class="huge-title">Technology<br>Focused &<br>Creatively Driven</div>
+        <p class="about-desc">
+            우리는 기술과 크리에이티브의 경계를 허뭅니다. 물리법칙에 기반한 인터랙션과 몰입감 넘치는 3D 공간을 통해 사용자에게 잊을 수 없는 디지털 경험을 제공합니다.
+        </p>
+    </div>
+
+    <!-- 페이지: Contact -->
+    <div id="page-contact" class="page">
+        <ul class="contact-list">
+            <li class="contact-item" id="trigger-mail">
+                <span class="link-text">Mail</span>
+            </li>
+            <li class="contact-item">
+                <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" class="link-text">Instagram</a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 페이지: Mail Form -->
+    <div id="page-mail-form" class="page">
+        <div class="mail-form-container">
+            <div class="form-header">// COMPOSE NEW MESSAGE</div>
+            <div class="form-group">
+                <label>Your Name</label>
+                <input type="text" placeholder="John Doe">
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" placeholder="john@example.com">
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea rows="4" placeholder="Tell us about your project..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="action-btn cancel-btn" id="cancel-mail">CANCEL</button>
+                <button class="action-btn send-btn" id="submit-mail">SEND MESSAGE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 페이지: Detail (프로젝트 클릭 시 확장되는 페이지) -->
+    <button class="close-btn" id="close-detail">RETURN TO GALLERY</button>
+    <div id="page-detail" class="page">
+        <div class="detail-header" id="detail-hero-img"></div>
+        <div class="detail-content">
+            <h2 id="detail-title">Project Title</h2>
+            <p style="font-family: var(--font-mono); max-width: 600px; line-height: 1.6;">
+                이곳은 상세 페이지입니다. 메인 갤러리에서 썸네일을 클릭하면 카메라가 해당 썸네일로 줌인되며 자연스럽게(Seamless) 이 상세 페이지로 전환됩니다. 전통적인 페이지 로딩 없이 완벽한 몰입감을 제공합니다.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 초기 설정 및 유틸리티
+        // ==========================================
+        const cursor = document.getElementById('cursor');
+        const hudClock = document.getElementById('hud-clock');
+        
+        // 커서 이동
+        window.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        // 인터랙티브 요소 커서 호버 효과 (항목 전체 크기에 반응하도록 타겟 변경)
+        const interativeElements = document.querySelectorAll('button, .contact-item, input, textarea');
+        interativeElements.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+
+        // 실시간 HUD 시계
+        setInterval(() => {
+            const now = new Date();
+            hudClock.innerText = now.toLocaleTimeString('en-US', { hour12: false }) + ':' + now.getMilliseconds().toString().padStart(3, '0').slice(0, 2);
+        }, 50);
+
+        // 텍스처 생성을 위한 유틸리티 함수 (외부 이미지 대신 다채로운 캔버스 텍스처 생성)
+        function createProceduralTexture(index) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 640; // 4:5 비율로 높이 수정 (기존 768)
+            const ctx = canvas.getContext('2d');
+            
+            // 다이내믹 그라데이션
+            const hue1 = (index * 45) % 360;
+            const hue2 = (hue1 + 60) % 360;
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, `hsl(${hue1}, 80%, 30%)`);
+            gradient.addColorStop(1, `hsl(${hue2}, 80%, 10%)`);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 타이포그래피 장식
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.font = 'bold 60px "Space Grotesk", sans-serif';
+            ctx.fillText(`PROJECT`, 40, 100);
+            ctx.fillText(`#${index + 1}`, 40, 160);
+
+            // 기하학적 도형 (비디오 재생을 시뮬레이션하기 위한 장치)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, 100, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.font = '20px "Space Mono", monospace';
+            ctx.fillText(`ID: ${Math.random().toString(36).substr(2, 6).toUpperCase()}`, 40, canvas.height - 40);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return { texture, canvas }; // 캔버스 참조도 반환하여 나중에 수정 가능하도록 함
+        }
+
+        // ==========================================
+        // 2. Three.js 3D 갤러리 셋업
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.02); // 깊이감을 위한 안개 (우주 공간에 맞게 밀도 조정)
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 0); // 사용자는 공간 중앙에 위치
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const galleryGroup = new THREE.Group();
+        scene.add(galleryGroup);
+
+        // 배경 별(Stars) 파티클 추가하여 우주 공간 느낌 극대화
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsVertices = [];
+        for(let i=0; i<1500; i++) {
+            const x = (Math.random() - 0.5) * 300;
+            const y = (Math.random() - 0.5) * 300;
+            const z = (Math.random() - 0.5) * 300;
+            starsVertices.push(x, y, z);
+        }
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        const starsMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 0.2, transparent: true, opacity: 0.6});
+        const starField = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(starField);
+
+        // 우주 공간 플로팅 레이아웃 변수
+        const totalItems = 60; // 아이템 개수 증가 (풍성한 공간감)
+        const itemWidth = 4;
+        const itemHeight = 5; 
+        const planes = [];
+
+        // 갤러리 아이템 생성
+        const geometry = new THREE.PlaneGeometry(itemWidth, itemHeight, 32, 32);
+        
+        for (let i = 0; i < totalItems; i++) {
+            const { texture, canvas } = createProceduralTexture(i);
+            
+            const material = new THREE.MeshBasicMaterial({ 
+                map: texture,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            // 피보나치 구면(Fibonacci Sphere) 알고리즘을 이용한 겹침 없는 3D 구형 배치
+            const phi = Math.acos(1 - 2 * (i + 0.5) / totalItems);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+            // 중앙에서 일정 거리 이상 떨어지도록 반경(Radius)에 랜덤 깊이감 추가
+            const radius = 20 + Math.random() * 30; 
+
+            mesh.position.x = radius * Math.sin(phi) * Math.cos(theta);
+            mesh.position.y = radius * Math.cos(phi);
+            mesh.position.z = radius * Math.sin(phi) * Math.sin(theta);
+            
+            // 모든 이미지가 우주 중앙(카메라 시작점)을 바라보게 하여 둥근 공간감을 만듦
+            mesh.lookAt(0, 0, 0);
+
+            // 사용자 데이터 저장 (상호작용 용도)
+            mesh.userData = { 
+                id: i, 
+                originalScale: 1, 
+                canvas: canvas, 
+                baseTexture: texture 
+            };
+            
+            galleryGroup.add(mesh);
+            planes.push(mesh);
+        }
+
+        // ==========================================
+        // 3. 물리 기반 관성 스크롤 및 드래그 (Interaction)
+        // ==========================================
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let currentX = 0, currentY = 0;
+        
+        // 회전 타겟 값 (우주 공간이므로 X축, Y축 모두 회전)
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+        
+        // 관성을 위한 속도 변수
+        let velocityX = 0;
+        let velocityY = 0;
+
+        // 마우스/터치 이벤트
+        const onPointerDown = (e) => {
+            if(document.querySelector('#page-detail').classList.contains('active')) return;
+            isDragging = true;
+            startX = e.clientX || e.touches[0].clientX;
+            startY = e.clientY || e.touches[0].clientY;
+            cursor.style.transform = 'translate(-50%, -50%) scale(0.5)';
+        };
+
+        const onPointerMove = (e) => {
+            if (!isDragging) return;
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            
+            const deltaX = clientX - startX;
+            const deltaY = clientY - startY;
+
+            // X축, Y축 드래그에 따라 공간 전체가 회전하도록 속도 축적
+            velocityX += deltaX * 0.0002;
+            velocityY += deltaY * 0.0002;
+
+            startX = clientX;
+            startY = clientY;
+        };
+
+        const onPointerUp = () => {
+            isDragging = false;
+            cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+        };
+
+        window.addEventListener('mousedown', onPointerDown);
+        window.addEventListener('mousemove', onPointerMove);
+        window.addEventListener('mouseup', onPointerUp);
+        window.addEventListener('touchstart', onPointerDown);
+        window.addEventListener('touchmove', onPointerMove);
+        window.addEventListener('touchend', onPointerUp);
+
+        // 휠 스크롤로 상하 이동 보조
+        window.addEventListener('wheel', (e) => {
+            if(document.querySelector('#page-detail').classList.contains('active')) return;
+            velocityY -= e.deltaY * 0.0001; // 휠 스크롤도 우주 공간의 X축 회전으로 반영
+        });
+
+        // ==========================================
+        // 4. Raycaster (Hover 마이크로 인터랙션 및 Click)
+        // ==========================================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredMesh = null;
+
+        window.addEventListener('mousemove', (e) => {
+            // 드래그 중이거나 상세 페이지가 열려있을 때는 호버 인식 중단
+            if(isDragging || document.getElementById('page-detail').classList.contains('active')) return;
+            
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planes);
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                if (hoveredMesh !== object) {
+                    // 이전 호버 해제
+                    if (hoveredMesh) {
+                        gsap.to(hoveredMesh.scale, { x: 1, y: 1, z: 1, duration: 0.4, ease: "power2.out" });
+                        hoveredMesh.material.opacity = 0.8;
+                    }
+                    // 새 호버 적용 (크기 증가 및 밝기 증가 - 미디어 재생 시뮬레이션)
+                    hoveredMesh = object;
+                    gsap.to(hoveredMesh.scale, { x: 1.1, y: 1.1, z: 1.1, duration: 0.4, ease: "back.out(1.5)" });
+                    hoveredMesh.material.opacity = 1.0;
+                    cursor.classList.add('hover');
+                }
+            } else {
+                if (hoveredMesh) {
+                    gsap.to(hoveredMesh.scale, { x: 1, y: 1, z: 1, duration: 0.4, ease: "power2.out" });
+                    hoveredMesh.material.opacity = 0.8;
+                    hoveredMesh = null;
+                    cursor.classList.remove('hover');
+                }
+            }
+        });
+
+        // 클릭 시 Hero Expansion (상세 페이지 전환)
+        window.addEventListener('click', (e) => {
+            // 상세 페이지가 열려있을 때는 배경 갤러리 클릭 무시
+            if (document.getElementById('page-detail').classList.contains('active')) return;
+
+            if (hoveredMesh && !isDragging) {
+                expandProject(hoveredMesh);
+            }
+        });
+
+        function expandProject(mesh) {
+            // 1. 카메라를 해당 메쉬 쪽으로 줌인 (공간감 있는 트랜지션)
+            // 메쉬의 현재 전역 위치 파악
+            const targetPos = new THREE.Vector3();
+            mesh.getWorldPosition(targetPos);
+            
+            // 카메라 최종 목적지: 메쉬 앞(중심 방향)으로 일정 거리(8) 띄운 위치
+            const camTarget = targetPos.clone().normalize().multiplyScalar(targetPos.length() - 8);
+
+            // 카메라가 현재 바라보는 방향과 목표 방향 벡터
+            const startLookAt = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+            const endLookAt = targetPos.clone().normalize();
+            
+            const lookAtProxy = { t: 0 };
+
+            // GSAP를 이용한 카메라 위치 이동
+            gsap.to(camera.position, {
+                x: camTarget.x,
+                y: camTarget.y,
+                z: camTarget.z,
+                duration: 1.2,
+                ease: "power3.inOut"
+            });
+            
+            // GSAP를 이용한 카메라 시선(lookAt) 회전 보간
+            gsap.to(lookAtProxy, {
+                t: 1,
+                duration: 1.2,
+                ease: "power3.inOut",
+                onUpdate: () => {
+                    // 카메라가 부드럽게 메쉬를 향해 고개를 돌림
+                    const currentDir = new THREE.Vector3().lerpVectors(startLookAt, endLookAt, lookAtProxy.t).normalize();
+                    const lookAtTarget = camera.position.clone().add(currentDir);
+                    camera.lookAt(lookAtTarget);
+                }
+            });
+
+            gsap.to(camera, {
+                fov: 40, // 줌인 시 시야각을 살짝 좁힘
+                duration: 1.2,
+                ease: "power3.inOut",
+                onUpdate: () => camera.updateProjectionMatrix(),
+                onComplete: () => {
+                    // 2. HTML 상세 페이지 표시 (Seamless)
+                    const detailPage = document.getElementById('page-detail');
+                    const closeBtn = document.getElementById('close-detail');
+                    const detailHero = document.getElementById('detail-hero-img');
+                    
+                    // 캔버스의 데이터를 CSS 배경으로 변환하여 자연스럽게 연결
+                    const dataUrl = mesh.userData.canvas.toDataURL();
+                    detailHero.style.backgroundImage = `url(${dataUrl})`;
+                    document.getElementById('detail-title').innerText = `PROJECT #${mesh.userData.id + 1}`;
+
+                    detailPage.classList.add('active');
+                    closeBtn.style.display = 'block';
+                    
+                    gsap.fromTo(detailHero, { scale: 1.1 }, { scale: 1, duration: 0.8, ease: "power2.out" });
+                    gsap.to(detailPage, { opacity: 1, duration: 0.5 });
+                    gsap.to(closeBtn, { opacity: 1, duration: 0.5 });
+                    
+                    // WebGL 캔버스 서서히 페이드 아웃
+                    gsap.to(container, { opacity: 0, duration: 0.5 });
+                }
+            });
+        }
+
+        // 상세 페이지 닫기 (히어로 페이지로 완벽하게 복귀)
+        document.getElementById('close-detail').addEventListener('click', (e) => {
+            e.stopPropagation(); // 닫기 버튼 클릭 이벤트가 뒤쪽 캔버스로 전파되는 것을 차단
+
+            const detailPage = document.getElementById('page-detail');
+            const closeBtn = document.getElementById('close-detail');
+            const detailHero = document.getElementById('detail-hero-img');
+
+            // 1. 상세 페이지 요소들 부드럽게 페이드 아웃 및 스케일 축소
+            gsap.to(detailHero, { scale: 0.9, duration: 0.5, ease: "power2.in" });
+            gsap.to(detailPage, { opacity: 0, duration: 0.5 });
+            gsap.to(closeBtn, { opacity: 0, duration: 0.5, onComplete: () => {
+                detailPage.classList.remove('active');
+                closeBtn.style.display = 'none';
+            }});
+
+            // 2. 3D 캔버스 페이드 인
+            gsap.to(container, { opacity: 1, duration: 0.5 });
+
+            // 3. 카메라 원래 위치(우주 공간 중앙) 및 원래 시선으로 복귀
+            const startLookAt = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+            const endLookAt = new THREE.Vector3(0, 0, -1); // 원래 정면 (Z축 안쪽)
+            const lookAtProxy = { t: 0 };
+
+            gsap.to(camera.position, {
+                x: 0, y: 0, z: 0,
+                duration: 1.2,
+                ease: "power3.inOut"
+            });
+
+            gsap.to(lookAtProxy, {
+                t: 1,
+                duration: 1.2,
+                ease: "power3.inOut",
+                onUpdate: () => {
+                    const currentDir = new THREE.Vector3().lerpVectors(startLookAt, endLookAt, lookAtProxy.t).normalize();
+                    const lookAtTarget = camera.position.clone().add(currentDir);
+                    camera.lookAt(lookAtTarget);
+                }
+            });
+
+            gsap.to(camera, {
+                fov: 60,
+                duration: 1.2,
+                ease: "power3.inOut",
+                onUpdate: () => camera.updateProjectionMatrix(),
+                onComplete: () => {
+                    // 복귀 완료 후 호버 상태 초기화 (클릭 버그 방지)
+                    if (hoveredMesh) {
+                        gsap.to(hoveredMesh.scale, { x: 1, y: 1, z: 1, duration: 0.4 });
+                        hoveredMesh = null;
+                    }
+                }
+            });
+
+            // 4. 네비게이션 상태를 'Work'로 동기화
+            const navBtns = document.querySelectorAll('.nav-btn');
+            navBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector('.nav-btn[data-target="work"]').classList.add('active');
+        });
+
+        // ==========================================
+        // 5. SPA 네비게이션 및 페이지 트랜지션 (GSAP)
+        // ==========================================
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const pages = {
+            work: null, // Work는 WebGL 캔버스 자체
+            about: document.getElementById('page-about'),
+            contact: document.getElementById('page-contact'),
+            mail: document.getElementById('page-mail-form')
+        };
+
+        function switchPage(target) {
+            // 활성화된 HTML 페이지 숨기기
+            Object.values(pages).forEach(page => {
+                if(page && page.classList.contains('active')) {
+                    gsap.to(page, { opacity: 0, duration: 0.4, onComplete: () => page.classList.remove('active') });
+                }
+            });
+
+            if (target === 'work') {
+                gsap.to(container, { opacity: 1, duration: 1, ease: "power2.out" });
+                gsap.to(camera.position, { x: 0, y: 0, z: 0, duration: 1, ease: "power2.out" });
+            } else {
+                gsap.to(container, { opacity: 0.2, duration: 0.8 });
+                gsap.to(camera.position, { z: 30, duration: 0.8, ease: "power2.inOut" });
+
+                const targetPage = pages[target];
+                targetPage.classList.add('active');
+                
+                // 페이지별 진입 애니메이션
+                if(target === 'about') {
+                    gsap.fromTo(targetPage.children, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, stagger: 0.2, ease: "power3.out", delay: 0.3 });
+                } else if (target === 'contact') {
+                    gsap.fromTo('.contact-item', { x: -50, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: "power3.out", delay: 0.3 });
+                } else if (target === 'mail') {
+                    gsap.fromTo('.mail-form-container', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out", delay: 0.3 });
+                }
+                gsap.to(targetPage, { opacity: 1, duration: 0.5, delay: 0.2 });
+            }
+        }
+
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target.getAttribute('data-target');
+                
+                // Active 버튼 스타일 업데이트
+                navBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                switchPage(target);
+            });
+        });
+
+        // Mail 작성 폼 열기 (Contact의 하위 뎁스처럼 처리)
+        document.getElementById('trigger-mail').addEventListener('click', () => {
+            switchPage('mail');
+        });
+
+        // Mail 작성 취소
+        document.getElementById('cancel-mail').addEventListener('click', () => {
+            switchPage('contact');
+        });
+
+        // Mail 전송 시뮬레이션
+        const submitBtn = document.getElementById('submit-mail');
+        submitBtn.addEventListener('click', () => {
+            submitBtn.innerText = "SENDING...";
+            gsap.to(submitBtn, { backgroundColor: "#00ff88", color: "black", duration: 0.3 });
+            
+            // 1.5초 후 전송 완료 피드백
+            setTimeout(() => {
+                submitBtn.innerText = "MESSAGE SENT!";
+                
+                // 1초 후 Contact 페이지로 복귀 및 폼 리셋
+                setTimeout(() => {
+                    switchPage('contact');
+                    
+                    // 폼 초기화는 애니메이션 끝난 후 진행
+                    setTimeout(() => {
+                        submitBtn.innerText = "SEND MESSAGE";
+                        gsap.set(submitBtn, { clearProps: "all" });
+                        document.querySelectorAll('.form-group input, .form-group textarea').forEach(input => input.value = '');
+                    }, 500);
+                }, 1500);
+            }, 1500);
+        });
+
+        // ==========================================
+        // 6. 메인 렌더 루프 (Animation & Physics)
+        // ==========================================
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 관성 물리 연산 (마찰력 적용)
+            velocityX *= 0.95; 
+            velocityY *= 0.95;
+
+            // 속도를 목표값에 더함
+            targetRotationY += velocityX;
+            targetRotationX += velocityY;
+
+            // 부드러운 보간 (Lerp)을 통해 우주 공간 전체 그룹 회전 적용
+            galleryGroup.rotation.y = THREE.MathUtils.lerp(galleryGroup.rotation.y, targetRotationY, 0.1);
+            galleryGroup.rotation.x = THREE.MathUtils.lerp(galleryGroup.rotation.x, targetRotationX, 0.1);
+
+            // 별똥별처럼 우주 배경을 아주 천천히 회전시켜 생동감 부여
+            starField.rotation.y += 0.0005;
+            starField.rotation.x += 0.0002;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // 반응형 리사이즈 처리
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
