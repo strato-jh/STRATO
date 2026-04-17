@@ -606,16 +606,7 @@ export default function GalleryPage() {
 
         const targetQuat = new THREE.Quaternion();
 
-        // Space Theme: Nebula Dust
-        const dustGeometry = new THREE.BufferGeometry();
-        const dustVertices = [];
-        for(let i=0; i<200; i++) {
-            dustVertices.push((Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150);
-        }
-        dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
-        const dustMaterial = new THREE.PointsMaterial({color: 0x331166, size: 20, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending});
-        const dustField = new THREE.Points(dustGeometry, dustMaterial);
-        scene.add(dustField);
+
 
         const animate = () => {
             animationFrameId.current = requestAnimationFrame(animate);
