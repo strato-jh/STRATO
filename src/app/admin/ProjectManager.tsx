@@ -622,6 +622,7 @@ export default function ProjectManager() {
                                     >
                                         <option value="FASHION" className="text-black">FASHION</option>
                                         <option value="BEAUTY" className="text-black">BEAUTY</option>
+                                        <option value="EDUCATION" className="text-black">EDUCATION</option>
                                         <option value="OTHER" className="text-black">OTHER</option>
                                     </select>
                                 </div>
@@ -899,6 +900,7 @@ export default function ProjectManager() {
                                     >
                                         <option value="FASHION" className="text-black">FASHION</option>
                                         <option value="BEAUTY" className="text-black">BEAUTY</option>
+                                        <option value="EDUCATION" className="text-black">EDUCATION</option>
                                         <option value="OTHER" className="text-black">OTHER</option>
                                     </select>
                                 </div>

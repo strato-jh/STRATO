@@ -83,13 +83,13 @@ function Nav({ activePage, setActivePage, isVisible }: any) {
 
 function PageGallery({ isActive, projects, onSelectProject, isUnlocked, onRequestUnlock }: any) {
     const [filter, setFilter] = useState('ALL');
-    const categories = ['ALL', 'FASHION', 'BEAUTY', 'OTHER', 'LOCKED'];
+    const categories = ['ALL', 'FASHION', 'BEAUTY', 'EDUCATION', 'OTHER', 'LOCKED'];
 
     let filtered = projects;
     if (filter === 'LOCKED') {
         filtered = projects.filter((p: any) => p.isRestricted);
     } else {
-        filtered = projects.filter((p: any) => (!p.isRestricted || isUnlocked) && (filter === 'ALL' || p.category === filter || (filter === 'OTHER' && p.category === 'ENT')));
+        filtered = projects.filter((p: any) => (!p.isRestricted || isUnlocked) && (filter === 'ALL' || p.category === filter || (filter === 'OTHER' && (p.category === 'ENT' || p.category === 'OTHER'))));
     }
 
     return (
