@@ -387,7 +387,7 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                 <div className="flex-1 flex flex-col justify-center">
                     {/* Mobile Navigation (Appears between Media and Date) */}
                     <div className="flex lg:hidden mb-8 pb-8 border-b border-black/10 items-center justify-between w-full flex-nowrap shrink-0 mt-4 lg:mt-0">
-                        <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-12 sm:h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
+                        <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-12 sm:h-14 rounded-[30px] border-2 border-[#ff3366]/40 text-[#ff3366] bg-[#ff3366]/5 font-bold uppercase tracking-widest hover:bg-[#ff3366] hover:text-white transition-all duration-300 cursor-pointer gap-2">
                             <Grid size={18} /> Home
                         </button>
                         <div className="flex gap-2 shrink-0">
@@ -417,7 +417,7 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                     </div>
 
                     <div className="hidden lg:flex mt-12 pt-10 border-t border-black/10 items-center justify-between w-full flex-nowrap shrink-0">
-                        <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
+                        <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-14 rounded-[30px] border-2 border-[#ff3366]/40 text-[#ff3366] bg-[#ff3366]/5 font-bold uppercase tracking-widest hover:bg-[#ff3366] hover:text-white transition-all duration-300 cursor-pointer gap-2">
                             <Grid size={18} /> <span>HOME</span>
                         </button>
                         <div className="flex gap-2 shrink-0">
