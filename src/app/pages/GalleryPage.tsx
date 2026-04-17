@@ -385,6 +385,21 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
 
                 {/* Right Side: Details & Actions */}
                 <div className="flex-1 flex flex-col justify-center">
+                    {/* Mobile Navigation (Appears between Media and Date) */}
+                    <div className="flex lg:hidden mb-8 pb-8 border-b border-black/10 items-center justify-between w-full flex-nowrap shrink-0 mt-4 lg:mt-0">
+                        <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-12 sm:h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
+                            <Grid size={18} /> Home
+                        </button>
+                        <div className="flex gap-2 shrink-0">
+                            <button onClick={prevProject} className="interactive-el flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
+                                <ArrowLeft size={18} />
+                            </button>
+                            <button onClick={nextProject} className="interactive-el flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-black/20 text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer">
+                                <ArrowRight size={18} />
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="text-sm font-bold text-[#ff3366] mb-4 uppercase tracking-[2px]" style={{ fontFamily: fontFamilyMono }}>
                         {project.date || '2026.04'} / {project.category}
                     </div>
@@ -401,7 +416,7 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                         <p>{project.description || '이 작품에 대한 상세 설명이 아직 등록되지 않았습니다.'}</p>
                     </div>
 
-                    <div className="flex mt-12 pt-10 border-t border-black/10 items-center justify-between w-full flex-nowrap shrink-0">
+                    <div className="hidden lg:flex mt-12 pt-10 border-t border-black/10 items-center justify-between w-full flex-nowrap shrink-0">
                         <button onClick={onClose} title="Return" className="interactive-el flex-1 max-w-[200px] flex items-center justify-center px-4 h-14 rounded-[30px] border border-black/20 text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all duration-300 cursor-pointer gap-2">
                             <Grid size={18} /> <span className="hidden sm:inline">View All Works</span><span className="sm:hidden">Home</span>
                         </button>
