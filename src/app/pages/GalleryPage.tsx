@@ -89,7 +89,7 @@ function PageGallery({ isActive, projects, onSelectProject, isUnlocked, onReques
     if (filter === 'LOCKED') {
         filtered = projects.filter((p: any) => p.isRestricted);
     } else {
-        filtered = projects.filter((p: any) => !p.isRestricted && (filter === 'ALL' || p.category === filter));
+        filtered = projects.filter((p: any) => !p.isRestricted && (filter === 'ALL' || p.category === filter || (filter === 'OTHER' && p.category === 'ENT')));
     }
 
     return (
