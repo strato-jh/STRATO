@@ -1032,8 +1032,8 @@ export default function GalleryPage() {
                 {showCodeModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 pointer-events-auto">
                         <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-[#111] border border-white/10 p-8 rounded-[20px] w-full max-w-[400px] relative">
-                            <button onClick={() => setShowCodeModal(false)} className="absolute top-4 right-4 text-white/50 hover:text-white interactive-el transition-colors cursor-pointer">
-                                <X size={24} />
+                            <button type="button" onClick={() => setShowCodeModal(false)} className="absolute top-4 right-4 z-50 text-white/50 hover:text-white interactive-el transition-colors cursor-pointer flex items-center justify-center p-2">
+                                <X size={20} />
                             </button>
                             <div className="text-sm font-bold text-[#ff3366] mb-6 uppercase tracking-[2px]" style={{ fontFamily: fontFamilyMono }}>// Restricted Access</div>
                             <h3 className="text-2xl font-bold mb-2 uppercase">Enter Access Code</h3>
