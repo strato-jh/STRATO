@@ -41,7 +41,7 @@ function CustomCursor() {
     );
 }
 
-function HUD() {
+function HUD({ activePage, setActivePage }: any) {
     const [time, setTime] = useState("");
     useEffect(() => {
         const interval = setInterval(() => {
@@ -51,21 +51,33 @@ function HUD() {
         return () => clearInterval(interval);
     }, []);
 
+    const isHome = activePage === 'home';
+
     return (
         <div style={{ fontFamily: fontFamilyMono }} className="fixed inset-0 pointer-events-none z-[100] text-[#f0f0f0] text-[10px] uppercase tracking-widest leading-relaxed opacity-50">
-            <div className="absolute top-5 left-5 flex flex-col gap-2">
-                <strong className="text-white text-lg block tracking-widest leading-none" style={{ fontFamily: fontFamilySans }}>STRATO</strong>
+            <div className="absolute top-5 left-5 flex flex-col gap-2 pointer-events-auto">
+                <button 
+                    onClick={() => setActivePage('home')}
+                    className="interactive-el text-white text-lg block tracking-widest leading-none font-bold bg-transparent border-none text-left cursor-pointer hover:opacity-80 transition-opacity p-0 m-0" 
+                    style={{ fontFamily: fontFamilySans }}
+                >
+                    STRATO
+                </button>
             </div>
-            <div className="absolute top-5 right-5 text-right">
-                <strong className="text-white text-xs block mb-1">{time}</strong>
-                LOC: SEOUL, KR<br/>
-                COORD: 37.5665° N, 126.9780° E
-            </div>
-            <div className="absolute bottom-[90px] md:bottom-5 left-5 text-left text-white/70">
-                DRAG TO PAN<br/>
-                SCROLL TO ZOOM<br/>
-                CLICK TO EXPAND
-            </div>
+            {isHome && (
+                <>
+                    <div className="absolute top-5 right-5 text-right">
+                        <strong className="text-white text-xs block mb-1">{time}</strong>
+                        LOC: SEOUL, KR<br/>
+                        COORD: 37.5665° N, 126.9780° E
+                    </div>
+                    <div className="absolute bottom-[90px] md:bottom-5 left-5 text-left text-white/70">
+                        DRAG TO PAN<br/>
+                        SCROLL TO ZOOM<br/>
+                        CLICK TO EXPAND
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -985,7 +997,7 @@ export default function GalleryPage() {
             `}} />
 
             <CustomCursor />
-            <HUD />
+            <HUD activePage={activePage} setActivePage={setActivePage} />
             <Nav activePage={activePage} setActivePage={setActivePage} isVisible={!selectedProject} />
 
             {!selectedProject && (
