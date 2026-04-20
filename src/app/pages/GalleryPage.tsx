@@ -455,52 +455,7 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                 </div>
             </div>
 
-            {/* Right Sidebar: All Projects Thumbnail Bar */}
-            <div 
-                className="w-[120px] shrink-0 h-full border-l border-black/10 bg-[#f0f0f0] flex flex-col relative z-[200] hidden lg:flex"
-                onWheel={(e) => e.stopPropagation()}
-            >
-                <div className="flex-1 overflow-y-auto hide-scrollbar p-3 flex flex-col gap-3 pointer-events-auto">
-                    {visibleProjects.map((p: any) => {
-                        const isSelected = p.id === project.id;
-                        return (
-                            <div 
-                                key={p.id} 
-                                onClick={() => onSelectProject(p)} 
-                                className={`sidebar-project-${p.id} interactive-el w-full aspect-square relative rounded-[10px] overflow-hidden cursor-pointer transition-all duration-300 ${isSelected ? 'border-2 border-[#ff3366] scale-105 shadow-[0_0_20px_rgba(255,51,102,0.4)] z-10' : 'border border-black/10 opacity-50 hover:opacity-100'}`}
-                            >
-                                {p.mediaType === 'video' ? (
-                                    p.thumbnailUrl ? (
-                                        <img src={p.thumbnailUrl} className="w-full h-full object-cover" alt="" />
-                                    ) : (
-                                        <video src={p.imageUrl} className="w-full h-full object-cover" preload="metadata" />
-                                    )
-                                ) : p.mediaType === 'youtube' ? (
-                                    <div className="w-full h-full relative">
-                                        <img src={p.imageUrl} className="w-full h-full object-cover" alt="" />
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                            <Play size={24} className="text-white drop-shadow-md fill-white/80" />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <img src={p.imageUrl} className="w-full h-full object-cover" alt="" />
-                                )}
-                                {p.isRestricted && (
-                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                        <Lock size={16} className="text-white/80" />
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
 
-                <div className="h-[80px] flex items-center justify-center border-t border-black/10 shrink-0 bg-transparent pointer-events-auto">
-                    <button onClick={onClose} className="interactive-el w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-[#ff3366] hover:text-white transition-colors cursor-pointer relative z-[130]">
-                        <X size={20} />
-                    </button>
-                </div>
-            </div>
         </motion.div>
     );
 }
@@ -690,11 +645,13 @@ export default function GalleryPage() {
         if (!galleryGroupRef.current) return;
         const group = galleryGroupRef.current;
         
-        // Remove old planes
+        // Remove old planes and prevent memory leaks by disposing of materials and maps
         planesRef.current.forEach(mesh => {
             group.remove(mesh);
             mesh.geometry.dispose();
-            (mesh.material as THREE.Material).dispose();
+            const material = mesh.material as THREE.MeshBasicMaterial;
+            if (material.map) material.map.dispose();
+            material.dispose();
         });
         planesRef.current = [];
 
@@ -717,20 +674,35 @@ export default function GalleryPage() {
                 targetUrl = proj.thumbnailUrl || 'https://placehold.co/400x500/1a1a1a/ffffff.png?text=VIDEO';
             }
 
-            textureLoader.load(targetUrl, 
-                (texture) => {
-                    const ratio = texture.image.width / texture.image.height;
-                    mesh.scale.set(ratio, 1, 1);
-                    texture.colorSpace = THREE.SRGBColorSpace;
-                    material.map = texture;
-                    material.color.setHex(0xffffff);
-                    material.needsUpdate = true;
-                },
-                undefined,
-                (err) => {
-                    console.error('Texture load error, log:', err);
-                }
-            );
+            // Immediately set visibility based on restriction and unlock status
+            mesh.visible = !proj.isRestricted || isUnlocked;
+            
+            // Assign proj properties directly to userData, plus our texture metadata
+            mesh.userData = { ...proj, _textureLoaded: false };
+            
+            mesh.userData._loadTexture = () => {
+                if (mesh.userData._textureLoaded) return;
+                textureLoader.load(targetUrl, 
+                    (texture) => {
+                        const ratio = texture.image.width / texture.image.height;
+                        mesh.scale.set(ratio, 1, 1);
+                        texture.colorSpace = THREE.SRGBColorSpace;
+                        material.map = texture;
+                        material.color.setHex(0xffffff);
+                        material.needsUpdate = true;
+                        mesh.userData._textureLoaded = true;
+                    },
+                    undefined,
+                    (err) => {
+                        console.error('Texture load error, log:', err);
+                    }
+                );
+            };
+
+            // Only load texture right away if it's visible. Otherwise, it will load when unlocked.
+            if (mesh.visible) {
+                mesh.userData._loadTexture();
+            }
 
             const phi = Math.acos(1 - 2 * (i + 0.5) / totalItems);
             const theta = Math.PI * (1 + Math.sqrt(5)) * i;
@@ -744,13 +716,24 @@ export default function GalleryPage() {
             mesh.position.z = radius * Math.sin(phi) * Math.sin(theta);
             mesh.lookAt(0, 0, 0);
 
-            mesh.visible = !proj.isRestricted || isUnlocked;
-            mesh.userData = proj;
             group.add(mesh);
             planesRef.current.push(mesh);
         });
 
-    }, [projects, isUnlocked]);
+    }, [projects]);
+
+    // Handle unlocking dynamically without destroying out the 3D scene
+    useEffect(() => {
+        if (!isUnlocked) return;
+        planesRef.current.forEach(mesh => {
+            if (mesh.userData.isRestricted && !mesh.visible) {
+                mesh.visible = true;
+                if (mesh.userData._loadTexture && !mesh.userData._textureLoaded) {
+                    mesh.userData._loadTexture();
+                }
+            }
+        });
+    }, [isUnlocked]);
 
     // Interactions
     useEffect(() => {
