@@ -599,7 +599,7 @@ export default function GalleryPage() {
             dragInfo.current.velocityX *= 0.95;
             dragInfo.current.velocityY *= 0.95;
 
-            const deltaY = dragInfo.current.velocityX + (!dragInfo.current.isDragging ? 0.0015 : 0);
+            const deltaY = dragInfo.current.velocityX + (!dragInfo.current.isDragging ? 0.00075 : 0);
             const deltaX = dragInfo.current.velocityY;
 
             if (deltaX !== 0 || deltaY !== 0) {
@@ -661,7 +661,8 @@ export default function GalleryPage() {
         textureLoader.crossOrigin = "Anonymous";
 
         const isMobile = window.innerWidth < 768;
-        const currentItemHeight = isMobile ? ITEM_HEIGHT * 0.6 : ITEM_HEIGHT;
+        // Reduce item height on mobile to fit more items visibly
+        const currentItemHeight = isMobile ? ITEM_HEIGHT * 0.35 : ITEM_HEIGHT;
         const totalItems = Math.max(projects.length, 1);
 
         projects.forEach((proj, i) => {
@@ -706,9 +707,10 @@ export default function GalleryPage() {
 
             const phi = Math.acos(1 - 2 * (i + 0.5) / totalItems);
             const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-            // Radius depends on total items to fit well. Tighter on mobile.
-            const radiusBase = isMobile ? 6 : 15;
-            const radiusSpread = isMobile ? 6 : 10;
+            // Radius depends on total items to fit well. 
+            // Wider base radius + smaller height on mobile = more items in view
+            const radiusBase = isMobile ? 8 : 15;
+            const radiusSpread = isMobile ? 5 : 10;
             const radius = radiusBase + Math.random() * radiusSpread; 
 
             mesh.position.x = radius * Math.sin(phi) * Math.cos(theta);
