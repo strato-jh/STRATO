@@ -2,17 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { Folder, FileText, Key, Activity, Eye, Lock } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const fontMono = "'Space Mono', monospace";
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({
-        totalProjects: 60,
-        visibleProjects: 40,
-        restrictedProjects: 20,
-        sections: 3,
+        totalProjects: 0,
+        visibleProjects: 0,
+        restrictedProjects: 0,
+        sections: 0,
         lastUpdate: new Date().toLocaleDateString()
     });
+
+    useEffect(() => {
+        const unsubProjects = onSnapshot(collection(db, 'projects'), (snap) => {
+            const currentProjects = snap.docs.map(doc => doc.data());
+            const total = currentProjects.length;
+            const restricted = currentProjects.filter(p => p.isRestricted).length;
+            const visible = total - restricted;
+            
+            setStats(prev => ({
+                ...prev,
+                totalProjects: total,
+                visibleProjects: visible,
+                restrictedProjects: restricted,
+                lastUpdate: new Date().toLocaleDateString()
+            }));
+        });
+
+        const unsubSections = onSnapshot(collection(db, 'sections'), (snap) => {
+            setStats(prev => ({
+                ...prev,
+                sections: snap.size,
+                lastUpdate: new Date().toLocaleDateString()
+            }));
+        });
+
+        return () => {
+            unsubProjects();
+            unsubSections();
+        };
+    }, []);
 
     const quickActions = [
         { icon: Folder, label: 'Manage Projects', path: '/admin/projects', color: 'white' },
@@ -156,7 +188,7 @@ export default function AdminDashboard() {
                 className="mt-6 text-xs text-white/40 border-t-2 border-white/10 pt-4"
             >
                 <p>&gt; Last Update: {stats.lastUpdate}</p>
-                <p>&gt; Database: Mock (Connect later)</p>
+                <p>&gt; Database: Firebase Live</p>
                 <p>&gt; Status: Ready</p>
             </motion.div>
         </div>
