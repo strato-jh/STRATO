@@ -311,6 +311,7 @@ function PageMail({ isActive, setPage }: any) {
 
 function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }: any) {
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+    const [direction, setDirection] = useState(0);
 
     const allMedia = React.useMemo(() => {
         if (!project) return [];
@@ -357,11 +358,13 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
 
     const nextMedia = (e: any) => {
         e.stopPropagation();
+        setDirection(1);
         setCurrentMediaIndex((prev) => (prev + 1) % allMedia.length);
     };
 
     const prevMedia = (e: any) => {
         e.stopPropagation();
+        setDirection(-1);
         setCurrentMediaIndex((prev) => (prev - 1 + allMedia.length) % allMedia.length);
     };
 
@@ -376,27 +379,38 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                 {/* Left Side: Media Carousel */}
                 <div className="w-full lg:w-[50%] flex flex-col items-center justify-start max-h-[85vh] relative">
                     {/* Media Container */}
-                    <div className="w-full relative flex items-center justify-center bg-black/5 rounded-[20px] shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
-                        {currentMedia && (
-                            <motion.div
-                                key={`${project.id}-media-${currentMediaIndex}`}
-                                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
-                                className="w-full flex items-center justify-center relative rounded-[20px] overflow-hidden"
-                            >
-                                {currentMedia.type === 'video' ? (
-                                    <video src={currentMedia.url} poster={currentMedia.thumbnail} autoPlay loop muted playsInline className="w-full h-auto max-h-[80vh] object-contain snap-center" />
-                                ) : currentMedia.type === 'youtube' ? (
-                                    <iframe 
-                                        src={`https://www.youtube.com/embed/${getYouTubeId(currentMedia.url || '')}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeId(currentMedia.url || '')}`}
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        className="w-full aspect-video h-auto max-h-[80vh] border-none bg-black rounded-[20px]"
-                                    />
-                                ) : (
-                                    <img src={currentMedia.url} className="w-full h-auto max-h-[80vh] object-contain snap-center" alt="" />
-                                )}
-                            </motion.div>
-                        )}
+                    <div className="w-full relative flex items-center justify-center overflow-hidden">
+                        <AnimatePresence mode="popLayout" custom={direction}>
+                            {currentMedia && (
+                                <motion.div
+                                    key={`${project.id}-media-${currentMediaIndex}`}
+                                    custom={direction}
+                                    variants={{
+                                        enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 20 : -20 }),
+                                        center: { opacity: 1, x: 0 },
+                                        exit: (dir: number) => ({ opacity: 0, x: dir < 0 ? 20 : -20 })
+                                    }}
+                                    initial="enter"
+                                    animate="center"
+                                    exit="exit"
+                                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                                    className="w-full flex items-center justify-center relative rounded-[20px] overflow-hidden"
+                                >
+                                    {currentMedia.type === 'video' ? (
+                                        <video src={currentMedia.url} poster={currentMedia.thumbnail} autoPlay loop muted playsInline className="w-full h-auto max-h-[80vh] object-contain snap-center" />
+                                    ) : currentMedia.type === 'youtube' ? (
+                                        <iframe 
+                                            src={`https://www.youtube.com/embed/${getYouTubeId(currentMedia.url || '')}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeId(currentMedia.url || '')}`}
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                            className="w-full aspect-video h-auto max-h-[80vh] border-none bg-black rounded-[20px]"
+                                        />
+                                    ) : (
+                                        <img src={currentMedia.url} className="w-full h-auto max-h-[80vh] object-contain snap-center" alt="" />
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                         
                         {/* Media Arrows */}
                         {allMedia.length > 1 && (
