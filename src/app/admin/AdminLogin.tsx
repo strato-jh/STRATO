@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { motion } from 'motion/react';
-import { Terminal, Lock, Eye, EyeOff } from 'lucide-react';
+import { Terminal, Lock, Eye, EyeOff, X } from 'lucide-react';
 
 const fontMono = "'Space Mono', monospace";
 
@@ -54,9 +54,18 @@ export default function AdminLogin() {
             >
                 {/* Terminal header */}
                 <div className="bg-black border-2 border-white/20 shadow-[0_10px_50px_rgba(0,0,0,0.5)]">
-                    <div className="border-b-2 border-white/10 px-4 py-3 flex items-center gap-3 bg-white/5">
-                        <Terminal size={18} className="text-white" />
-                        <span className="text-sm uppercase tracking-widest">STRATO Admin Access</span>
+                    <div className="border-b-2 border-white/10 px-4 py-3 flex items-center justify-between bg-white/5">
+                        <div className="flex items-center gap-3">
+                            <Terminal size={18} className="text-white" />
+                            <span className="text-sm uppercase tracking-widest">STRATO Admin Access</span>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/')}
+                            className="text-white/50 hover:text-white transition-colors p-1"
+                            title="Close and return to site"
+                        >
+                            <X size={20} />
+                        </button>
                     </div>
 
                     <div className="p-8">
