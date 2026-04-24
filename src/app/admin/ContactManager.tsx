@@ -222,7 +222,7 @@ export default function ContactManager() {
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             className="bg-black border-2 border-white/40 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                         >
                             {/* Header */}

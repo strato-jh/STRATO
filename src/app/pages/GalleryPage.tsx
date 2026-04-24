@@ -41,7 +41,7 @@ function CustomCursor() {
     );
 }
 
-function HUD({ activePage, setActivePage }: any) {
+function HUD({ activePage, onHomeClick }: any) {
     const [time, setTime] = useState("");
     useEffect(() => {
         const interval = setInterval(() => {
@@ -57,7 +57,7 @@ function HUD({ activePage, setActivePage }: any) {
         <div style={{ fontFamily: fontFamilyMono }} className="fixed inset-0 pointer-events-none z-[100] text-[#f0f0f0] text-[10px] uppercase tracking-widest leading-relaxed opacity-50">
             <div className="absolute top-5 left-5 flex flex-col gap-2 pointer-events-auto">
                 <button 
-                    onClick={() => setActivePage('home')}
+                    onClick={onHomeClick}
                     className="interactive-el text-white text-lg block tracking-widest leading-none font-bold bg-transparent border-none text-left cursor-pointer hover:opacity-80 transition-opacity p-0 m-0" 
                     style={{ fontFamily: fontFamilySans }}
                 >
@@ -82,7 +82,7 @@ function HUD({ activePage, setActivePage }: any) {
     );
 }
 
-function Nav({ activePage, setActivePage, isVisible }: any) {
+function Nav({ activePage, setPageWithHistory, isVisible }: any) {
     if (!isVisible) return null;
     return (
         <nav className="fixed bottom-[30px] left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md border border-white/20 rounded-[50px] flex p-1 z-[200] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
@@ -90,7 +90,7 @@ function Nav({ activePage, setActivePage, isVisible }: any) {
                 <button
                     key={page}
                     className={`interactive-el bg-transparent border-none text-sm font-bold px-5 py-2.5 md:px-6 rounded-[30px] cursor-pointer transition-all duration-300 capitalize ${activePage === page ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
-                    onClick={() => setActivePage(activePage === page ? 'home' : page)}
+                    onClick={() => setPageWithHistory(activePage === page ? 'home' : page)}
                     style={{ fontFamily: fontFamilySans }}
                 >
                     {page}
@@ -209,7 +209,7 @@ function PageAbout({ isActive, section }: any) {
     );
 }
 
-function PageContact({ isActive, setPage, socialLinks }: any) {
+function PageContact({ isActive, setPageWithHistory, socialLinks }: any) {
     // Only display enabled social links that have URLs
     const activeLinks = socialLinks?.filter((link: any) => link.enabled && link.url) || [];
 
@@ -223,7 +223,7 @@ function PageContact({ isActive, setPage, socialLinks }: any) {
                     <motion.li initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
                         className="text-[clamp(40px,6vw,100px)] font-bold uppercase border-b border-white/10 text-white/30 hover:text-white transition-colors duration-300 relative"
                     >
-                        <span className="interactive-el block w-full py-5 cursor-pointer" onClick={() => setPage('mail')}>Mail</span>
+                        <span className="interactive-el block w-full py-5 cursor-pointer" onClick={() => setPageWithHistory('mail')}>Mail</span>
                     </motion.li>
                     {activeLinks.map((link: any, index: number) => (
                         <motion.li key={link.id} initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.8, delay: 0.4 + (index * 0.1), ease: "easeOut" }}
@@ -238,7 +238,7 @@ function PageContact({ isActive, setPage, socialLinks }: any) {
     );
 }
 
-function PageMail({ isActive, setPage }: any) {
+function PageMail({ isActive, setPageWithHistory }: any) {
     const [sending, setSending] = useState(false);
     const [sent, setSent] = useState(false);
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -263,7 +263,7 @@ function PageMail({ isActive, setPage }: any) {
             setTimeout(() => {
                 setSent(false);
                 setFormData({ name: '', email: '', message: '' });
-                setPage('contact');
+                setPageWithHistory('contact');
             }, 2000);
         } catch (error) {
             console.error('Error sending message:', error);
@@ -296,7 +296,7 @@ function PageMail({ isActive, setPage }: any) {
                         <textarea rows={4} value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} placeholder="Tell us about your project..." className="interactive-el w-full bg-transparent border-none border-b border-white/20 py-2.5 text-white text-xl outline-none focus:border-white transition-colors duration-300 resize-none"></textarea>
                     </div>
                     <div className="flex gap-[15px] mt-10">
-                        <button onClick={() => setPage('contact')} className="interactive-el flex-1 p-5 text-base font-bold uppercase tracking-[2px] cursor-pointer rounded-[10px] border border-white/20 bg-transparent text-white hover:bg-white/10 transition-colors">Cancel</button>
+                        <button onClick={() => setPageWithHistory('contact')} className="interactive-el flex-1 p-5 text-base font-bold uppercase tracking-[2px] cursor-pointer rounded-[10px] border border-white/20 bg-transparent text-white hover:bg-white/10 transition-colors">Cancel</button>
                         <button onClick={handleSubmit} disabled={sending || sent}
                             className={`interactive-el flex-1 p-5 text-base font-bold uppercase tracking-[2px] cursor-pointer rounded-[10px] border-none transition-all duration-300 ${sent ? 'bg-[#00ff88] text-black' : sending ? 'bg-white/80 text-black' : 'bg-white text-black hover:bg-[#ff3366] hover:text-white hover:-translate-y-[2px]'}`}
                         >
@@ -397,10 +397,10 @@ function PageDetail({ project, projects, onSelectProject, onClose, isUnlocked }:
                                     className="w-full flex items-center justify-center relative rounded-[20px] overflow-hidden"
                                 >
                                     {currentMedia.type === 'video' ? (
-                                        <video src={currentMedia.url} poster={currentMedia.thumbnail} autoPlay loop muted playsInline className="w-full h-auto max-h-[80vh] object-contain snap-center" />
+                                        <video src={currentMedia.url} poster={currentMedia.thumbnail} autoPlay loop controls playsInline className="w-full h-auto max-h-[80vh] object-contain snap-center" />
                                     ) : currentMedia.type === 'youtube' ? (
                                         <iframe 
-                                            src={`https://www.youtube.com/embed/${getYouTubeId(currentMedia.url || '')}?autoplay=1&mute=1&loop=1&playlist=${getYouTubeId(currentMedia.url || '')}`}
+                                            src={`https://www.youtube.com/embed/${getYouTubeId(currentMedia.url || '')}?autoplay=1&loop=1&playlist=${getYouTubeId(currentMedia.url || '')}`}
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                             allowFullScreen
                                             className="w-full aspect-video h-auto max-h-[80vh] border-none bg-black rounded-[20px]"
@@ -523,6 +523,53 @@ export default function GalleryPage() {
     const hoveredMeshRef = useRef<THREE.Mesh | null>(null);
     const selectedMeshRef = useRef<THREE.Mesh | null>(null);
 
+    const setPageWithHistory = (page: string) => {
+        if (activePage !== page) {
+            window.history.pushState({ page, project: null }, '', `/?page=${page}`);
+            setActivePage(page);
+        }
+    };
+
+    const handleHomeClick = () => {
+        if (selectedProject) {
+            closeDetail(false);
+        } else {
+            setPageWithHistory('home');
+        }
+    };
+
+    // History API Listener
+    useEffect(() => {
+        // Init state if none
+        if (!window.history.state) {
+            window.history.replaceState({ page: activePage, project: selectedProject }, '', window.location.search || '/');
+        }
+
+        const handlePopState = (e: PopStateEvent) => {
+            const state = e.state;
+            if (state) {
+                if (state.project) {
+                    setSelectedProject(state.project);
+                    setActivePage('home');
+                } else {
+                    if (selectedProject) {
+                        closeDetail(true);
+                    }
+                    setActivePage(state.page || 'home');
+                }
+            } else {
+                if (selectedProject) {
+                    closeDetail(true);
+                } else {
+                    setActivePage('home');
+                }
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [activePage, selectedProject]);
+
     // Fetch Projects and Sections from Firestore
     useEffect(() => {
         const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
@@ -597,7 +644,25 @@ export default function GalleryPage() {
         scene.add(galleryGroup);
         galleryGroupRef.current = galleryGroup;
 
-        // Space Theme: Stars (Increased visibility)
+        const createSoftTexture = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            if (context) {
+                const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 64, 64);
+            }
+            return new THREE.CanvasTexture(canvas);
+        };
+        const softTexture = createSoftTexture();
+
+        // 1. Space Theme: Stars (Increased visibility)
         const starsGeometry = new THREE.BufferGeometry();
         const starsVertices = [];
         const starsColors = [];
@@ -611,9 +676,102 @@ export default function GalleryPage() {
         }
         starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
         starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starsColors, 3));
-        const starsMaterial = new THREE.PointsMaterial({size: 0.6, vertexColors: true, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending});
+
+        const starsMaterial = new THREE.PointsMaterial({
+            size: 1.5, 
+            vertexColors: true, 
+            transparent: true, 
+            opacity: 1.0, 
+            blending: THREE.AdditiveBlending,
+            map: softTexture,
+            depthWrite: false
+        });
         const starField = new THREE.Points(starsGeometry, starsMaterial);
         scene.add(starField);
+
+        // 2. Space Theme: Nebula / Milky Way (Subtle)
+        const nebulaGeometry = new THREE.BufferGeometry();
+        const nebulaVertices = [];
+        const nebulaColors = [];
+        const nColorObj = new THREE.Color();
+        
+        for(let i=0; i<600; i++) {
+            const radius = 100 + Math.random() * 400;
+            const theta = (Math.random() - 0.5) * Math.PI * 2;
+            const y = (Math.random() - 0.5) * 150 * (1 - radius/500); 
+            
+            nebulaVertices.push(radius * Math.cos(theta), y, radius * Math.sin(theta));
+            
+            const colorType = Math.random();
+            if (colorType < 0.2) nColorObj.setHex(0x6a1b9a); // Muted Purple
+            else if (colorType < 0.5) nColorObj.setHex(0x1565c0); // Muted Blue
+            else if (colorType < 0.7) nColorObj.setHex(0xad1457); // Muted Pink
+            else if (colorType < 0.9) nColorObj.setHex(0x00838f); // Muted Cyan
+            else nColorObj.setHex(0xaaaaaa); // Dim White
+
+            nebulaColors.push(nColorObj.r, nColorObj.g, nColorObj.b);
+        }
+        nebulaGeometry.setAttribute('position', new THREE.Float32BufferAttribute(nebulaVertices, 3));
+        nebulaGeometry.setAttribute('color', new THREE.Float32BufferAttribute(nebulaColors, 3));
+        
+        const nebulaMaterial = new THREE.PointsMaterial({
+            size: 300, 
+            vertexColors: true, 
+            transparent: true, 
+            opacity: 0.25, // Increased visibility again
+            blending: THREE.AdditiveBlending,
+            map: softTexture,
+            depthWrite: false
+        });
+        const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
+        nebulaField.rotation.z = Math.PI / 6; // Tilt the Milky Way
+        scene.add(nebulaField);
+
+        // 3. Space Theme: Shooting Stars
+        // Make it thinner, shorter, and farther away
+        const shootingStarGeo = new THREE.CylinderGeometry(0.05, 0.2, 20, 4);
+        shootingStarGeo.rotateX(Math.PI / 2); // Align to Z. -Z is tail, +Z is front.
+        const shootingStarMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const shootingStar = new THREE.Mesh(shootingStarGeo, shootingStarMat);
+        shootingStar.visible = false;
+        scene.add(shootingStar);
+
+        let starTimeout: NodeJS.Timeout;
+        const shootStar = () => {
+            // Spawn farther away in the background (Z: -100 to -250)
+            const startX = (Math.random() - 0.5) * 300;
+            const startY = 30 + Math.random() * 80;
+            const startZ = -150 - Math.random() * 100;
+
+            const endX = startX - 50 - Math.random() * 50;
+            const endY = startY - 50 - Math.random() * 50;
+            const endZ = startZ + 30 + Math.random() * 30;
+
+            shootingStar.position.set(startX, startY, startZ);
+            shootingStar.lookAt(endX, endY, endZ);
+            shootingStar.visible = true;
+            shootingStar.material.opacity = 0.8;
+
+            gsap.to(shootingStar.material, { opacity: 0, duration: 0.3, delay: 0.1 + Math.random() * 0.2 });
+            gsap.to(shootingStar.position, {
+                x: endX,
+                y: endY,
+                z: endZ,
+                duration: 0.4 + Math.random() * 0.3,
+                ease: "power1.in",
+                onComplete: () => {
+                    shootingStar.visible = false;
+                    starTimeout = setTimeout(shootStar, 2000 + Math.random() * 5000); // Every 2-7 seconds
+                }
+            });
+        };
+        starTimeout = setTimeout(shootStar, 1000);
 
         const targetQuat = new THREE.Quaternion();
 
@@ -641,6 +799,9 @@ export default function GalleryPage() {
             starField.rotation.y += 0.0005;
             starField.rotation.x += 0.0002;
 
+            nebulaField.rotation.y += 0.0003;
+            nebulaField.rotation.z += 0.0001;
+
             if (rendererRef.current && sceneRef.current && cameraRef.current) {
                 rendererRef.current.render(sceneRef.current, cameraRef.current);
             }
@@ -657,6 +818,7 @@ export default function GalleryPage() {
         window.addEventListener('resize', handleResize);
 
         return () => {
+            clearTimeout(starTimeout);
             window.removeEventListener('resize', handleResize);
             cancelAnimationFrame(animationFrameId.current);
             if (rendererRef.current && container.contains(rendererRef.current.domElement)) {
@@ -769,6 +931,10 @@ export default function GalleryPage() {
 
         const onPointerDown = (e: MouseEvent | TouchEvent) => {
             if (isInteractionDisabled()) return;
+            
+            const target = e.target as HTMLElement;
+            if (target && target.closest && target.closest('.interactive-el, a, button, input, textarea, form, [role="dialog"]')) return;
+            
             dragInfo.current.isDragging = true;
             dragInfo.current.moved = false;
             dragInfo.current.startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -794,6 +960,17 @@ export default function GalleryPage() {
                 dragInfo.current.startX = clientX;
                 dragInfo.current.startY = clientY;
             } else if (cameraRef.current) {
+                const target = e.target as HTMLElement;
+                if (target && target.closest && target.closest('.interactive-el, a, button, input, textarea, form, [role="dialog"]')) {
+                    if (hoveredMeshRef.current) {
+                        gsap.to(hoveredMeshRef.current.scale, { x: hoveredMeshRef.current.scale.x / 1.1, y: 1, z: 1, duration: 0.4 });
+                        (hoveredMeshRef.current.material as THREE.MeshBasicMaterial).opacity = 0.8;
+                        hoveredMeshRef.current = null;
+                        document.body.classList.remove('cursor-hover');
+                    }
+                    return;
+                }
+
                 mouseRef.current.x = (clientX / window.innerWidth) * 2 - 1;
                 mouseRef.current.y = -(clientY / window.innerHeight) * 2 + 1;
 
@@ -833,8 +1010,12 @@ export default function GalleryPage() {
             dragInfo.current.velocityY -= e.deltaY * 0.0001;
         };
 
-        const onClick = () => {
+        const onClick = (e: MouseEvent) => {
             if (isInteractionDisabled() || dragInfo.current.moved) return;
+            
+            const target = e.target as HTMLElement;
+            if (target && target.closest && target.closest('.interactive-el, a, button, input, textarea, form, [role="dialog"]')) return;
+
             if (hoveredMeshRef.current && cameraRef.current) {
                 const mesh = hoveredMeshRef.current;
                 const proj = mesh.userData;
@@ -881,6 +1062,7 @@ export default function GalleryPage() {
 
                 setTimeout(() => {
                     setSelectedProject(proj);
+                    window.history.pushState({ page: 'home', project: proj }, '', `/?project=${proj.id}`);
                 }, 400);
 
                 document.body.classList.remove('cursor-hover');
@@ -920,9 +1102,13 @@ export default function GalleryPage() {
         }
     }, [activePage]);
 
-    const closeDetail = () => {
+    const closeDetail = (isPopState = false) => {
         setSelectedProject(null);
         setActivePage('home');
+
+        if (isPopState !== true) {
+            window.history.pushState({ page: 'home', project: null }, '', '/');
+        }
 
         dragInfo.current.targetRotationX = 0;
         dragInfo.current.targetRotationY = 0;
@@ -967,6 +1153,7 @@ export default function GalleryPage() {
         // Note: Full 3D camera navigation to arbitrary mesh from 2D gallery requires complex matrix projection.
         // For simple UX parity, we will just open the Detail overlay for that project on top of home.
         setSelectedProject(project); 
+        window.history.pushState({ page: 'home', project }, '', `/?project=${project.id}`);
     };
 
     const handleUnlockSubmit = async (e: React.FormEvent) => {
@@ -1011,8 +1198,8 @@ export default function GalleryPage() {
             `}} />
 
             <CustomCursor />
-            <HUD activePage={activePage} setActivePage={setActivePage} />
-            <Nav activePage={activePage} setActivePage={setActivePage} isVisible={!selectedProject} />
+            <HUD activePage={activePage} onHomeClick={handleHomeClick} />
+            <Nav activePage={activePage} setPageWithHistory={setPageWithHistory} isVisible={!selectedProject} />
 
             {!selectedProject && (
                 <Link to="/admin" className="fixed bottom-5 right-5 z-[150] text-[10px] text-white/30 hover:text-white/80 transition-colors uppercase tracking-widest pointer-events-auto interactive-el" style={{ fontFamily: fontFamilyMono }}>
@@ -1033,8 +1220,8 @@ export default function GalleryPage() {
 
             <PageGallery isActive={activePage === 'gallery'} projects={projects} onSelectProject={handleSelectFrom2DGallery} isUnlocked={isUnlocked} onRequestUnlock={() => setShowCodeModal(true)} />
             <PageAbout isActive={activePage === 'about'} section={sections.find(s => s.id === 'about')} />
-            <PageContact isActive={activePage === 'contact'} setPage={setActivePage} socialLinks={socialLinks} />
-            <PageMail isActive={activePage === 'mail'} setPage={setActivePage} contactEmail={contactEmail} />
+            <PageContact isActive={activePage === 'contact'} setPageWithHistory={setPageWithHistory} socialLinks={socialLinks} />
+            <PageMail isActive={activePage === 'mail'} setPageWithHistory={setPageWithHistory} contactEmail={contactEmail} />
 
             <AnimatePresence>
                 {selectedProject && (
