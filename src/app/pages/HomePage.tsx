@@ -306,8 +306,8 @@ function NavBar({ bp, solid, onRequestAccess, menuOpen, setMenuOpen }: NavBarPro
                         <button
                             type="button"
                             onClick={onRequestAccess}
-                            title="Request access to private projects"
-                            aria-label="Request access to private projects"
+                            title="비공개 작업물 보기"
+                            aria-label="비공개 작업물 접근 코드 입력"
                             style={{
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                 width: 30, height: 30, flex: '0 0 auto',
@@ -457,7 +457,7 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
                         <h1 style={{ ...tHeroH1(bp), color: '#fff', margin: 0, textAlign: 'center' }}>{title}</h1>
                         <p style={{ ...tHeroSub(bp), color: '#fff', margin: 0, textAlign: 'center' }}>{sub}</p>
                     </div>
-                    <OutlineButton bp={bp} tone="onDark" label="See Our Work" onClick={onCta} />
+                    <OutlineButton bp={bp} tone="onDark" label="작업 보기" onClick={onCta} />
                 </div>
             </div>
         </section>
@@ -1077,8 +1077,8 @@ function SectionD({
                                 <button
                                     type="button"
                                     onClick={onRequestAccess}
-                                    title={`${hiddenCount} private ${hiddenCount === 1 ? 'project' : 'projects'} — enter access code`}
-                                    aria-label="Enter access code to view private projects"
+                                    title={`비공개 작업물 ${hiddenCount}개 — 접근 코드 입력`}
+                                    aria-label="비공개 작업물 접근 코드 입력"
                                     style={{
                                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                         width: 28, height: 28, flex: '0 0 auto', marginLeft: 4,
@@ -1137,7 +1137,7 @@ function SectionD({
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <OutlineButton
                         bp={bp}
-                        label={`Show More (${remaining})`}
+                        label={`더 보기 (${remaining})`}
                         onClick={() => setShown((n) => n + WORK_PAGE_SIZE)}
                     />
                 </div>
@@ -1225,7 +1225,7 @@ function SectionE({ bp, image, onStart, heading, sub }: SectionEProps) {
                     </div>
 
                     <div style={{ flex: '0 0 auto' }}>
-                        <OutlineButton bp={bp} tone="onDark" label="Start a Project" onClick={onStart} />
+                        <OutlineButton bp={bp} tone="onDark" label="프로젝트 문의" onClick={onStart} />
                     </div>
                 </div>
             </div>
@@ -1314,7 +1314,7 @@ function ContactSection({ bp, contactEmail, socialLinks, heading, onOpenForm }: 
             >
                 <h2 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>{heading}</h2>
 
-                <OutlineButton bp={bp} label="Send a message" onClick={onOpenForm} />
+                <OutlineButton bp={bp} label="메시지 보내기" onClick={onOpenForm} />
 
                 {/* Address and social reduced to two icon links. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1403,7 +1403,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
-                    <h2 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>Start a conversation.</h2>
+                    <h2 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>이야기를 시작해요.</h2>
                     <button
                         type="button"
                         onClick={onClose}
@@ -1419,7 +1419,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
 
                 <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'flex-start' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                        <span style={fieldLabel}>Name</span>
+                        <span style={fieldLabel}>이름</span>
                         <input
                             required
                             value={form.name}
@@ -1428,7 +1428,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                         />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                        <span style={fieldLabel}>Email</span>
+                        <span style={fieldLabel}>이메일</span>
                         <input
                             required
                             type="email"
@@ -1438,7 +1438,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                         />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                        <span style={fieldLabel}>Message</span>
+                        <span style={fieldLabel}>내용</span>
                         <textarea
                             required
                             rows={4}
@@ -1451,7 +1451,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                         bp={bp}
                         type="submit"
                         disabled={busy || sent}
-                        label={sent ? 'MESSAGE SENT' : busy ? 'SENDING' : 'Send Message'}
+                        label={sent ? '전송 완료' : busy ? '보내는 중' : '보내기'}
                     />
                 </form>
             </div>
@@ -1517,7 +1517,7 @@ function Footer({ bp, contactEmail, socialLinks, addressHeading, addressLines }:
                     width: '100%',
                 }}
             >
-                <FooterStack bp={bp} heading="Contact.">
+                <FooterStack bp={bp} heading="연락처">
                     <a href={`mailto:${contactEmail}`} style={{ ...tFootBody(bp), color: '#fff', textDecoration: 'none' }}>
                         {contactEmail}
                     </a>
@@ -1529,7 +1529,7 @@ function Footer({ bp, contactEmail, socialLinks, addressHeading, addressLines }:
                     ))}
                 </FooterStack>
 
-                <FooterStack bp={bp} heading="Social Media">
+                <FooterStack bp={bp} heading="소셜">
                     {socialLinks.filter((s) => s.enabled !== false).map((s) => (
                         <a
                             key={s.id}
@@ -1782,7 +1782,7 @@ function AccessModal({ bp, onClose, onUnlock }: AccessModalProps) {
             onUnlock();
             onClose();
         } else {
-            setError('That code is not valid or has expired.');
+            setError('유효하지 않거나 만료된 코드입니다.');
             setShake((s) => s + 1);
         }
     };
@@ -1813,9 +1813,9 @@ function AccessModal({ bp, onClose, onUnlock }: AccessModalProps) {
                     ✕
                 </button>
 
-                <h3 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>Restricted Access</h3>
+                <h3 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>비공개 작업물</h3>
                 <p style={{ ...tDeck(bp), color: INK_60, margin: 0 }}>
-                    Enter the access code you were given to view protected work.
+                    전달받은 접근 코드를 입력하면 비공개 작업물이 함께 표시됩니다.
                 </p>
 
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'flex-start' }}>
@@ -1825,7 +1825,7 @@ function AccessModal({ bp, onClose, onUnlock }: AccessModalProps) {
                         transition={{ duration: 0.35 }}
                         value={code}
                         onChange={(e) => { setCode(e.target.value); setError(''); }}
-                        placeholder="ACCESS CODE"
+                        placeholder="접근 코드"
                         autoFocus
                         style={{
                             fontFamily: SANS, fontWeight: 400, fontSize: 16, letterSpacing: '0.08em', color: '#000',
@@ -1834,7 +1834,7 @@ function AccessModal({ bp, onClose, onUnlock }: AccessModalProps) {
                         }}
                     />
                     {error && <span style={{ ...tCardBody(bp), color: INK_60 }}>{error}</span>}
-                    <OutlineButton bp={bp} type="submit" disabled={busy} label={busy ? 'CHECKING' : 'Unlock'} />
+                    <OutlineButton bp={bp} type="submit" disabled={busy} label={busy ? '확인 중' : '확인'} />
                 </form>
             </div>
         </div>

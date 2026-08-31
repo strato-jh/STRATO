@@ -96,16 +96,16 @@ export const SECTION_DEFS: SectionDef[] = [
         defaults: {
             items: [
                 {
-                    title: 'It understands the brand.',
-                    body: 'Grounded in your brand guidelines, visual language and the craft behind past work.',
+                    title: '브랜드를 먼저 읽습니다.',
+                    body: '무엇을 파는지가 아니라 어떻게 기억되고 싶은지를 먼저 정리합니다. 톤과 결을 잡은 뒤에 만들기 시작합니다.',
                 },
                 {
-                    title: 'It produces real work.',
-                    body: 'Images, film and campaigns finished to a standard that survives real workflows.',
+                    title: '바로 쓸 수 있게 만듭니다.',
+                    body: '팝업, 캠페인, 상세 페이지까지 채널별 규격에 맞춰 그대로 올릴 수 있는 상태로 넘겨드립니다.',
                 },
                 {
-                    title: 'It gets sharper every cycle.',
-                    body: 'Feedback and results from each delivery improve the next piece we make.',
+                    title: '할수록 빨라집니다.',
+                    body: '지난 작업에서 정한 기준과 피드백이 다음 작업의 출발점이 됩니다. 매번 처음부터 시작하지 않습니다.',
                 },
             ],
         },
@@ -118,29 +118,29 @@ export const SECTION_DEFS: SectionDef[] = [
         itemsLabel: '작업 단계',
         maxItems: 6,
         defaults: {
-            title: 'How the work gets made.',
+            title: '이렇게 만듭니다.',
             content:
                 '기획부터 완성까지 한 팀이 이어서 끌고 갑니다. 단계가 넘어가도 맥락이 끊기지 않습니다.',
             items: [
                 {
-                    title: 'Direction',
-                    label: '기획 · 브랜딩',
+                    title: '기획 · 브랜딩',
+                    label: 'Direction',
                     body: '레퍼런스와 브랜드 기준을 정리해 방향을 잡습니다. 무엇을 만들지가 여기서 결정됩니다.',
                 },
                 {
-                    title: 'Generation',
-                    label: '이미지 · 비디오 생성',
-                    body: '정해진 방향 위에서 이미지와 영상을 만들어냅니다. 필요한 포맷과 채널을 함께 고려합니다.',
+                    title: '이미지 · 영상 생성',
+                    label: 'Generation',
+                    body: '정해진 방향 위에서 비주얼을 만들어냅니다. 쓰일 포맷과 채널을 처음부터 함께 고려합니다.',
                 },
                 {
-                    title: 'Post & VFX',
-                    label: '후반 편집 · VFX',
-                    body: '편집, 색보정, 합성으로 완성도를 끌어올립니다. 디테일이 결과를 가릅니다.',
+                    title: '후반 편집 · VFX',
+                    label: 'Post & VFX',
+                    body: '편집, 색보정, 합성으로 완성도를 끌어올립니다. 결과를 가르는 건 결국 디테일입니다.',
                 },
                 {
-                    title: 'Delivery',
-                    label: '완성',
-                    body: '채널별 규격에 맞춰 정리해 전달합니다. 바로 쓸 수 있는 상태로 넘어갑니다.',
+                    title: '완성 · 전달',
+                    label: 'Delivery',
+                    body: '채널별 규격에 맞춰 정리해 넘겨드립니다. 받는 즉시 올릴 수 있는 상태입니다.',
                 },
             ],
         },
@@ -151,7 +151,7 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '프로젝트 그리드 위에 붙는 짧은 제목',
         fields: ['title'],
         defaults: {
-            title: 'And here’s what came out.',
+            title: '그래서 이런 것들을 만들었습니다.',
         },
     },
     {
@@ -160,8 +160,8 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '프로젝트 목록 아래 이미지 배너의 문구',
         fields: ['title', 'content', 'imageUrl'],
         defaults: {
-            title: 'Let’s build the next one.',
-            content: 'Tell us what you’re making.',
+            title: '다음 작업을 함께 만들어요.',
+            content: '어떤 걸 만들고 계신지 들려주세요.',
         },
     },
     {
@@ -170,7 +170,7 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '문의 폼 왼쪽 상단 제목',
         fields: ['title'],
         defaults: {
-            title: 'Start a conversation.',
+            title: '이야기를 시작해요.',
         },
     },
     {
@@ -179,7 +179,7 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '푸터 주소 블록의 제목과 줄바꿈으로 구분된 주소 줄',
         fields: ['title', 'content'],
         defaults: {
-            title: 'Address.',
+            title: '주소',
             content: 'SEOUL, KR\n37.5665° N, 126.9780° E',
         },
     },
