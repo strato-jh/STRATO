@@ -1225,7 +1225,7 @@ function SectionE({ bp, image, onStart, heading, sub }: SectionEProps) {
                     </div>
 
                     <div style={{ flex: '0 0 auto' }}>
-                        <OutlineButton bp={bp} tone="onDark" label="프로젝트 문의" onClick={onStart} />
+                        <OutlineButton bp={bp} tone="onDark" label="Start a Project" onClick={onStart} />
                     </div>
                 </div>
             </div>
@@ -1314,7 +1314,7 @@ function ContactSection({ bp, contactEmail, socialLinks, heading, onOpenForm }: 
             >
                 <h2 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>{heading}</h2>
 
-                <OutlineButton bp={bp} label="메시지 보내기" onClick={onOpenForm} />
+                <OutlineButton bp={bp} label="Send a message" onClick={onOpenForm} />
 
                 {/* Address and social reduced to two icon links. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1403,7 +1403,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
-                    <h2 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>이야기를 시작해요.</h2>
+                    <h2 style={{ ...tHeading(bp), color: '#000', margin: 0 }}>Start a conversation.</h2>
                     <button
                         type="button"
                         onClick={onClose}
@@ -1419,7 +1419,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
 
                 <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'flex-start' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                        <span style={fieldLabel}>이름</span>
+                        <span style={fieldLabel}>Name</span>
                         <input
                             required
                             value={form.name}
@@ -1428,7 +1428,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                         />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                        <span style={fieldLabel}>이메일</span>
+                        <span style={fieldLabel}>Email</span>
                         <input
                             required
                             type="email"
@@ -1438,7 +1438,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                         />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                        <span style={fieldLabel}>내용</span>
+                        <span style={fieldLabel}>Message</span>
                         <textarea
                             required
                             rows={4}
@@ -1451,7 +1451,7 @@ function ContactModal({ bp, onClose }: ContactModalProps) {
                         bp={bp}
                         type="submit"
                         disabled={busy || sent}
-                        label={sent ? '전송 완료' : busy ? '보내는 중' : '보내기'}
+                        label={sent ? 'MESSAGE SENT' : busy ? 'SENDING' : 'Send Message'}
                     />
                 </form>
             </div>
@@ -1517,7 +1517,7 @@ function Footer({ bp, contactEmail, socialLinks, addressHeading, addressLines }:
                     width: '100%',
                 }}
             >
-                <FooterStack bp={bp} heading="연락처">
+                <FooterStack bp={bp} heading="Contact.">
                     <a href={`mailto:${contactEmail}`} style={{ ...tFootBody(bp), color: '#fff', textDecoration: 'none' }}>
                         {contactEmail}
                     </a>
@@ -1529,7 +1529,7 @@ function Footer({ bp, contactEmail, socialLinks, addressHeading, addressLines }:
                     ))}
                 </FooterStack>
 
-                <FooterStack bp={bp} heading="소셜">
+                <FooterStack bp={bp} heading="Social Media">
                     {socialLinks.filter((s) => s.enabled !== false).map((s) => (
                         <a
                             key={s.id}

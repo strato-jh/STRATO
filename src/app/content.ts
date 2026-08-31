@@ -160,8 +160,8 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '프로젝트 목록 아래 이미지 배너의 문구',
         fields: ['title', 'content', 'imageUrl'],
         defaults: {
-            title: '다음 작업을 함께 만들어요.',
-            content: '어떤 걸 만들고 계신지 들려주세요.',
+            title: 'Let’s build the next one.',
+            content: 'Tell us what you’re making.',
         },
     },
     {
@@ -170,7 +170,7 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '문의 폼 왼쪽 상단 제목',
         fields: ['title'],
         defaults: {
-            title: '이야기를 시작해요.',
+            title: 'Start a conversation.',
         },
     },
     {
@@ -179,7 +179,7 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '푸터 주소 블록의 제목과 줄바꿈으로 구분된 주소 줄',
         fields: ['title', 'content'],
         defaults: {
-            title: '주소',
+            title: 'Address.',
             content: 'SEOUL, KR\n37.5665° N, 126.9780° E',
         },
     },
