@@ -3,8 +3,9 @@ import { motion } from 'motion/react';
 import { Key, Copy, RefreshCw, Check, Lock } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { SANS, SERIF } from '../theme';
 
-const fontMono = "'Space Mono', monospace";
+const headingStyle = { fontFamily: SERIF, fontWeight: 400, letterSpacing: '-0.01em' } as const;
 
 export default function PasswordGenerator() {
     const [password, setPassword] = useState('');
@@ -70,28 +71,39 @@ export default function PasswordGenerator() {
         }
     };
 
-    const getStrengthColor = () => {
+    /* Strength is monochrome: how much of the track is filled + a Korean label. */
+    const getStrengthFill = () => {
         switch (strength) {
-            case 'Weak': return '#ff3366';
-            case 'Medium': return '#ffaa00';
-            case 'Strong': return '#00ff88';
-            default: return 'white';
+            case 'Weak': return '33%';
+            case 'Medium': return '66%';
+            case 'Strong': return '100%';
+            default: return '0%';
+        }
+    };
+
+    const getStrengthLabel = () => {
+        switch (strength) {
+            case 'Weak': return '약함';
+            case 'Medium': return '보통';
+            case 'Strong': return '강함';
+            default: return '';
         }
     };
 
     return (
-        <div style={{ fontFamily: fontMono }}>
+        <div style={{ fontFamily: SANS }}>
             {/* Header */}
             <div className="mb-8">
                 <motion.h1
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="text-3xl font-bold mb-2 uppercase tracking-wider flex items-center gap-3"
+                    className="text-3xl mb-2 flex items-center gap-3 text-white"
+                    style={headingStyle}
                 >
-                    <Key size={32} className="text-white" />
+                    <Key size={28} className="text-white" />
                     Password Generator
                 </motion.h1>
-                <p className="text-sm text-white/60">&gt; Generate secure passwords for admin access</p>
+                <p className="text-sm text-white/50">비공개 프로젝트를 열람할 수 있는 접근 코드를 발급합니다 (유효기간 24시간)</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -100,9 +112,9 @@ export default function PasswordGenerator() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-white/5 border-2 border-white/20 p-6"
+                    className="bg-white/5 border border-white/15 p-6"
                 >
-                    <h2 className="text-lg font-bold mb-4 uppercase tracking-wide flex items-center gap-2">
+                    <h2 className="text-lg mb-4 flex items-center gap-2 text-white" style={headingStyle}>
                         <Lock size={18} />
                         Configure
                     </h2>
@@ -111,10 +123,10 @@ export default function PasswordGenerator() {
                         {/* Length Slider */}
                         <div>
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-sm uppercase tracking-wide text-white/70">
-                                    &gt; Length
+                                <label className="text-sm uppercase tracking-wide text-white/50">
+                                    Length
                                 </label>
-                                <span className="text-white font-bold text-lg">{length}</span>
+                                <span className="text-white font-medium text-lg">{length}</span>
                             </div>
                             <input
                                 type="range"
@@ -124,14 +136,14 @@ export default function PasswordGenerator() {
                                 onChange={(e) => setLength(parseInt(e.target.value))}
                                 className="w-full accent-white"
                             />
-                            <div className="flex justify-between text-xs text-white/40 mt-1">
+                            <div className="flex justify-between text-xs text-white/35 mt-1">
                                 <span>8</span>
                                 <span>32</span>
                             </div>
                         </div>
 
                         {/* Options */}
-                        <div className="space-y-3 pt-2 border-t border-white/20">
+                        <div className="space-y-3 pt-4 border-t border-white/15">
                             <label className="flex items-center gap-3 cursor-pointer group">
                                 <input
                                     type="checkbox"
@@ -139,7 +151,7 @@ export default function PasswordGenerator() {
                                     onChange={(e) => setIncludeUppercase(e.target.checked)}
                                     className="w-5 h-5 accent-white"
                                 />
-                                <span className="text-sm uppercase tracking-wide group-hover:text-white/70 transition-colors">
+                                <span className="text-sm uppercase tracking-wide text-white/70 group-hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]">
                                     Uppercase Letters (A-Z)
                                 </span>
                             </label>
@@ -150,7 +162,7 @@ export default function PasswordGenerator() {
                                     onChange={(e) => setIncludeLowercase(e.target.checked)}
                                     className="w-5 h-5 accent-white"
                                 />
-                                <span className="text-sm uppercase tracking-wide group-hover:text-white/70 transition-colors">
+                                <span className="text-sm uppercase tracking-wide text-white/70 group-hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]">
                                     Lowercase Letters (a-z)
                                 </span>
                             </label>
@@ -161,7 +173,7 @@ export default function PasswordGenerator() {
                                     onChange={(e) => setIncludeNumbers(e.target.checked)}
                                     className="w-5 h-5 accent-white"
                                 />
-                                <span className="text-sm uppercase tracking-wide group-hover:text-white/70 transition-colors">
+                                <span className="text-sm uppercase tracking-wide text-white/70 group-hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]">
                                     Numbers (0-9)
                                 </span>
                             </label>
@@ -172,7 +184,7 @@ export default function PasswordGenerator() {
                                     onChange={(e) => setIncludeSymbols(e.target.checked)}
                                     className="w-5 h-5 accent-white"
                                 />
-                                <span className="text-sm uppercase tracking-wide group-hover:text-white/70 transition-colors">
+                                <span className="text-sm uppercase tracking-wide text-white/70 group-hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]">
                                     Symbols (!@#$%...)
                                 </span>
                             </label>
@@ -181,7 +193,7 @@ export default function PasswordGenerator() {
                         {/* Generate Button */}
                         <button
                             onClick={generatePassword}
-                            className="w-full bg-white text-black py-3 px-6 font-bold uppercase tracking-widest hover:bg-white/90 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 mt-6"
+                            className="w-full bg-white text-black py-3 px-6 font-medium uppercase tracking-widest hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] flex items-center justify-center gap-2 mt-6"
                         >
                             <RefreshCw size={18} />
                             Generate Password
@@ -194,66 +206,57 @@ export default function PasswordGenerator() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-white/5 border-2 border-white/20 p-6"
+                    className="bg-white/5 border border-white/15 p-6"
                 >
-                    <h2 className="text-lg font-bold mb-4 uppercase tracking-wide">
-                        &gt; Generated Password
+                    <h2 className="text-lg mb-4 text-white" style={headingStyle}>
+                        Generated Password
                     </h2>
 
                     {/* Password Display */}
                     <div className="mb-6">
-                        <div className="bg-black border-2 border-white/40 p-4 min-h-[80px] flex items-center justify-center relative group">
+                        <div className="bg-black border border-white/28 p-4 min-h-[80px] flex items-center justify-center relative group">
                             {password ? (
                                 <>
-                                    <p className="text-white text-lg break-all text-center font-bold tracking-wide">
+                                    <p className="text-white text-lg break-all text-center font-medium tracking-wide">
                                         {password}
                                     </p>
                                     <button
                                         onClick={copyToClipboard}
-                                        className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                                        className="absolute top-2 right-2 text-white/50 hover:text-white transition-colors duration-200 ease-[var(--ease-btn)] opacity-0 group-hover:opacity-100"
                                         title="Copy to clipboard"
                                     >
                                         {copied ? <Check size={18} /> : <Copy size={18} />}
                                     </button>
                                 </>
                             ) : (
-                                <p className="text-white/40 text-sm uppercase">
+                                <p className="text-white/35 text-sm uppercase">
                                     No password generated yet
                                 </p>
                             )}
                         </div>
                     </div>
 
-                    {/* Strength Indicator */}
+                    {/* Strength Indicator — fill length + label, no hue */}
                     {password && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
                             className="mb-6"
                         >
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm uppercase tracking-wide text-white/70">
-                                    &gt; Strength
+                                <span className="text-sm uppercase tracking-wide text-white/50">
+                                    Strength
                                 </span>
-                                <span
-                                    className="font-bold uppercase text-sm px-3 py-1 border-2"
-                                    style={{
-                                        color: getStrengthColor(),
-                                        borderColor: getStrengthColor()
-                                    }}
-                                >
-                                    {strength}
+                                <span className="text-sm text-white font-semibold">
+                                    {getStrengthLabel()}
                                 </span>
                             </div>
-                            <div className="w-full h-2 bg-black border border-white/30">
+                            <div className="w-full h-2 bg-black border border-white/15">
                                 <motion.div
                                     initial={{ width: 0 }}
-                                    animate={{
-                                        width: strength === 'Weak' ? '33%' : strength === 'Medium' ? '66%' : '100%'
-                                    }}
+                                    animate={{ width: getStrengthFill() }}
                                     transition={{ duration: 0.5 }}
-                                    className="h-full"
-                                    style={{ backgroundColor: getStrengthColor() }}
+                                    className="h-full bg-white"
                                 />
                             </div>
                         </motion.div>
@@ -264,10 +267,10 @@ export default function PasswordGenerator() {
                         <button
                             onClick={copyToClipboard}
                             disabled={copied}
-                            className={`w-full py-3 px-6 font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                            className={`w-full py-3 px-6 font-medium uppercase tracking-widest transition-colors duration-200 ease-[var(--ease-btn)] flex items-center justify-center gap-2 ${
                                 copied
                                     ? 'bg-white text-black'
-                                    : 'border-2 border-white/40 text-white hover:bg-white hover:text-black'
+                                    : 'border border-white/28 text-white hover:border-white'
                             }`}
                         >
                             {copied ? (
@@ -291,21 +294,20 @@ export default function PasswordGenerator() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="mt-8 bg-white/5 border-2 border-white/20 p-6"
+                className="mt-8 bg-white/5 border border-white/15 p-6"
             >
-                <h3 className="text-lg font-bold mb-3 uppercase tracking-wide text-white">
-                    &gt; Usage Guide
+                <h3 className="text-lg mb-3 text-white" style={headingStyle}>
+                    안내
                 </h3>
-                <div className="space-y-2 text-sm text-white/80">
-                    <p>&gt; Use these generated passwords for:</p>
+                <div className="space-y-2 text-sm text-white/70">
+                    <p>여기서 발급한 코드는 <strong className="text-white">비공개 프로젝트 열람용</strong>입니다.</p>
                     <ul className="list-none space-y-1 ml-4">
-                        <li>• Admin authentication</li>
-                        <li>• Gallery access codes (like STRATO01)</li>
-                        <li>• Restricted project passwords</li>
-                        <li>• API keys and tokens</li>
+                        <li>• 사이트의 자물쇠 아이콘을 눌러 입력하면 잠긴 작업물이 표시됩니다</li>
+                        <li>• 저장하면 이전 코드는 즉시 무효가 됩니다</li>
+                        <li>• <strong className="text-white">유효기간은 발급 후 24시간</strong>이며, 지나면 다시 발급해야 합니다</li>
                     </ul>
-                    <p className="mt-4 text-white/60 text-xs">
-                        &gt; Remember to store passwords securely and never share them publicly
+                    <p className="mt-4 text-white/35 text-xs">
+                        관리자 로그인 비밀번호와는 별개입니다. 관리자 계정은 Firebase Authentication에서 관리합니다.
                     </p>
                 </div>
             </motion.div>

@@ -5,3 +5,6 @@ dist/
 build/
 .next/
 .DS_Store
+
+# local dev tooling
+.claude/

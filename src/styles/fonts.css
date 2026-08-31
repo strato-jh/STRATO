@@ -1,1 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Courier+Prime:wght@400;700&display=swap');
+/* STRATO webfonts.
+   Inter    — the whole UI, and the STRATO wordmark at 800 to match the logo
+              (heavy, wide grotesque, tight tracking).
+   Instrument Serif — section headings only. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap');

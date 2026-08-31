@@ -1,11 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Folder, Plus, Edit, Trash2, Eye, EyeOff, Image, Save, X, Upload, Film } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
+import {
+    Folder, Plus, Edit, Trash2, Eye, EyeOff, Image, Save, X, Upload, Film,
+    ArrowUp, ArrowDown, ChevronsUp, LayoutGrid, List,
+} from 'lucide-react';
+import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, orderBy, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebase';
+import { db } from '../../firebase';
+import { storage } from '../../firebaseStorage';
+import { SANS, SERIF } from '../theme';
+import { byDisplayOrder } from '../pages/useStratoData';
 
-const fontMono = "'Space Mono', monospace";
+const headingStyle = { fontFamily: SERIF, fontWeight: 400, letterSpacing: '-0.01em' } as const;
+
+/**
+ * Media-fragment seek so the browser paints the first frame when a project has
+ * no thumbnail. Without it a poster-less <video> renders as a black box.
+ */
+function videoSrc(url?: string) {
+    if (!url) return undefined;
+    return url.includes('#') ? url : `${url}#t=0.1`;
+}
+
+/* Dense admin input: 1px hairline, zero radius, no glow on focus. */
+const inputClass =
+    'w-full bg-white/[0.04] border border-white/15 px-3 py-2 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] placeholder:text-white/35';
+const labelClass = 'block text-sm mb-2 uppercase tracking-wide text-white/50';
+const dropZoneClass =
+    'border border-dashed border-white/15 text-center hover:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)]';
+/* Active filter is white-filled; inactive is a hairline outline. */
+const chipClass = (active: boolean) =>
+    `px-4 py-2 text-sm uppercase tracking-wide transition-colors duration-200 ease-[var(--ease-btn)] ${
+        active
+            ? 'bg-white text-black font-medium'
+            : 'border border-white/15 text-white/70 hover:border-white hover:text-white'
+    }`;
 
 interface MediaItem {
     url: string;
@@ -26,6 +55,8 @@ interface Project {
     location?: string;
     additionalMedia?: MediaItem[];
     createdAt?: number;
+    /** Manual display order. Lower comes first; unset sorts last. */
+    order?: number;
 }
 
 export default function ProjectManager() {
@@ -34,6 +65,10 @@ export default function ProjectManager() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedThumbnailFile, setSelectedThumbnailFile] = useState<File | null>(null);
     const [selectedAdditionalFiles, setSelectedAdditionalFiles] = useState<File[]>([]);
+    const [isReordering, setIsReordering] = useState(false);
+    const [view, setView] = useState<'grid' | 'list'>('grid');
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const [overIndex, setOverIndex] = useState<number | null>(null);
 
     useEffect(() => {
         const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
@@ -42,7 +77,8 @@ export default function ProjectManager() {
                 id: doc.id,
                 ...doc.data()
             })) as Project[];
-            setProjects(projectsData);
+            /* Same ordering rule as the public site. */
+            setProjects(projectsData.sort(byDisplayOrder));
         }, (error) => {
             console.error("Error fetching projects: ", error);
         });
@@ -202,18 +238,24 @@ export default function ProjectManager() {
                 const finalAdditionalMedia = [...(editForm.additionalMedia || []), ...newlyUploadedMedias];
 
                 const projectRef = doc(db, 'projects', editForm.id);
+                /* Firestore rejects `undefined` outright, so every optional
+                 * field is coerced to '' before it goes near the write. */
                 await updateDoc(projectRef, {
-                    title: editForm.title,
-                    description: editForm.description,
-                    imageUrl: finalImageUrl,
-                    thumbnailUrl: editForm.mediaType === 'video' ? finalThumbnailUrl : '',
-                    mediaType: editForm.mediaType,
-                    youtubeUrl: editForm.mediaType === 'youtube' ? editForm.youtubeUrl : '',
-                    isRestricted: editForm.isRestricted,
-                    category: editForm.category,
-                    date: editForm.date,
-                    location: editForm.location || '',
-                    additionalMedia: finalAdditionalMedia
+                    title: editForm.title ?? '',
+                    description: editForm.description ?? '',
+                    imageUrl: finalImageUrl ?? '',
+                    thumbnailUrl: editForm.mediaType === 'video' ? (finalThumbnailUrl ?? '') : '',
+                    mediaType: editForm.mediaType ?? 'image',
+                    youtubeUrl: editForm.mediaType === 'youtube' ? (editForm.youtubeUrl ?? '') : '',
+                    isRestricted: !!editForm.isRestricted,
+                    category: editForm.category ?? '',
+                    date: editForm.date ?? '',
+                    location: editForm.location ?? '',
+                    additionalMedia: finalAdditionalMedia.map((m) => ({
+                        url: m.url ?? '',
+                        type: m.type ?? 'image',
+                        ...(m.thumbnail ? { thumbnail: m.thumbnail } : {}),
+                    })),
                 });
                 
                 setIsEditing(false);
@@ -277,18 +319,23 @@ export default function ProjectManager() {
                 }
             }
 
+            /* Same rule as the edit path: never let `undefined` reach Firestore. */
             await addDoc(collection(db, 'projects'), {
-                title: newProject.title,
-                description: newProject.description,
-                imageUrl: finalImageUrl,
-                thumbnailUrl: newProject.mediaType === 'video' ? finalThumbnailUrl : '',
-                mediaType: newProject.mediaType,
-                youtubeUrl: newProject.mediaType === 'youtube' ? newProject.youtubeUrl : '',
-                isRestricted: newProject.isRestricted,
-                category: newProject.category,
-                date: newProject.date,
-                location: newProject.location || '',
-                additionalMedia: newAdditionalMedias,
+                title: newProject.title ?? '',
+                description: newProject.description ?? '',
+                imageUrl: finalImageUrl ?? '',
+                thumbnailUrl: newProject.mediaType === 'video' ? (finalThumbnailUrl ?? '') : '',
+                mediaType: newProject.mediaType ?? 'image',
+                youtubeUrl: newProject.mediaType === 'youtube' ? (newProject.youtubeUrl ?? '') : '',
+                isRestricted: !!newProject.isRestricted,
+                category: newProject.category ?? '',
+                date: newProject.date ?? '',
+                location: newProject.location ?? '',
+                additionalMedia: newAdditionalMedias.map((m) => ({
+                    url: m.url ?? '',
+                    type: m.type ?? 'image',
+                    ...(m.thumbnail ? { thumbnail: m.thumbnail } : {}),
+                })),
                 createdAt: Date.now()
             });
 
@@ -323,24 +370,104 @@ export default function ProjectManager() {
         return true;
     });
 
+    /* Reordering rewrites `order` for every project in one batch, so a list
+     * that was never ordered before gets normalised on the first move.
+     * Only offered on the unfiltered list — moving an item inside a filtered
+     * view would jump it past hidden neighbours with no visible feedback. */
+    const canReorder = filter === 'all';
+
+    const persistOrder = async (next: Project[]) => {
+        setIsReordering(true);
+        try {
+            const batch = writeBatch(db);
+            next.forEach((p, i) => batch.update(doc(db, 'projects', p.id), { order: i }));
+            await batch.commit();
+        } catch (error) {
+            console.error('Error reordering projects: ', error);
+            alert('순서 변경에 실패했습니다.');
+        } finally {
+            setIsReordering(false);
+        }
+    };
+
+    /** Pull one project out and re-insert it at `to`, then renumber everything. */
+    const moveTo = async (from: number, to: number) => {
+        if (isReordering || from === to) return;
+        if (from < 0 || from >= projects.length || to < 0 || to >= projects.length) return;
+
+        const next = [...projects];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        await persistOrder(next);
+    };
+
+    const moveProject = (index: number, delta: number) => moveTo(index, index + delta);
+
+    /* --- drag and drop (native HTML5, no dependency) --- */
+
+    const onDragStart = (index: number) => (e: React.DragEvent) => {
+        if (!canReorder) return;
+        setDragIndex(index);
+        e.dataTransfer.effectAllowed = 'move';
+        /* Firefox needs data set or the drag never starts. */
+        e.dataTransfer.setData('text/plain', String(index));
+    };
+
+    const onDragOver = (index: number) => (e: React.DragEvent) => {
+        if (!canReorder || dragIndex === null) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (index !== overIndex) setOverIndex(index);
+    };
+
+    const onDrop = (index: number) => (e: React.DragEvent) => {
+        if (!canReorder || dragIndex === null) return;
+        e.preventDefault();
+        const from = dragIndex;
+        setDragIndex(null);
+        setOverIndex(null);
+        moveTo(from, index);
+    };
+
+    const onDragEnd = () => {
+        setDragIndex(null);
+        setOverIndex(null);
+    };
+
+    /* Suggestions come from what is actually in the data, plus the studio's
+     * standing set — so a new category can be typed without a code change. */
+    const categoryOptions = Array.from(
+        new Set([
+            ...projects.map((p) => (p.category ?? '').trim().toUpperCase()).filter(Boolean),
+            'FASHION', 'BEAUTY', 'EDUCATION', 'OTHER',
+        ]),
+    ).sort();
+
     return (
-        <div style={{ fontFamily: fontMono }}>
+        <div style={{ fontFamily: SANS }}>
+            <datalist id="strato-categories">
+                {categoryOptions.map((c) => (
+                    <option key={c} value={c} />
+                ))}
+            </datalist>
+
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <motion.h1
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="text-3xl font-bold mb-2 uppercase tracking-wider flex items-center gap-3"
+                        className="text-3xl mb-2 flex items-center gap-3 text-white"
+                        style={headingStyle}
                     >
-                        <Folder size={32} className="text-white" />
+                        <Folder size={28} className="text-white" />
                         Project Manager
                     </motion.h1>
-                    <p className="text-sm text-white/60">&gt; Manage gallery projects, images, and content</p>
+                    <p className="text-sm text-white/50">프로젝트와 미디어를 등록하고 노출 순서를 관리합니다</p>
                 </div>
                 <button
                     onClick={() => setShowAddModal(true)}
-                    className="bg-white text-black px-6 py-3 font-bold uppercase tracking-wide hover:bg-white/90 transition-all flex items-center gap-2"
+                    className="bg-white text-black px-6 py-3 font-medium uppercase tracking-wide hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] flex items-center gap-2"
                 >
                     <Plus size={18} />
                     Add New
@@ -349,39 +476,167 @@ export default function ProjectManager() {
 
             {/* Filters */}
             <div className="mb-6 flex gap-2 flex-wrap">
-                <button
-                    onClick={() => setFilter('all')}
-                    className={`px-4 py-2 text-sm uppercase tracking-wide transition-all ${
-                        filter === 'all'
-                            ? 'bg-white text-black font-bold'
-                            : 'bg-white/5 border-2 border-white/20 text-white hover:bg-white/10'
-                    }`}
-                >
+                <button onClick={() => setFilter('all')} className={chipClass(filter === 'all')}>
                     All ({projects.length})
                 </button>
-                <button
-                    onClick={() => setFilter('visible')}
-                    className={`px-4 py-2 text-sm uppercase tracking-wide transition-all ${
-                        filter === 'visible'
-                            ? 'bg-white text-black font-bold'
-                            : 'bg-white/5 border-2 border-white/20 text-white hover:bg-white/10'
-                    }`}
-                >
+                <button onClick={() => setFilter('visible')} className={chipClass(filter === 'visible')}>
                     Visible ({projects.filter(p => !p.isRestricted).length})
                 </button>
-                <button
-                    onClick={() => setFilter('restricted')}
-                    className={`px-4 py-2 text-sm uppercase tracking-wide transition-all ${
-                        filter === 'restricted'
-                            ? 'bg-white text-black font-bold'
-                            : 'bg-white/5 border-2 border-white/20 text-white hover:bg-white/10'
-                    }`}
-                >
+                <button onClick={() => setFilter('restricted')} className={chipClass(filter === 'restricted')}>
                     Restricted ({projects.filter(p => p.isRestricted).length})
                 </button>
+
+                <div className="ml-auto flex gap-2">
+                    <button
+                        onClick={() => setView('grid')}
+                        className={`${chipClass(view === 'grid')} flex items-center gap-1.5`}
+                        title="그리드로 보기"
+                    >
+                        <LayoutGrid size={14} />
+                        Grid
+                    </button>
+                    <button
+                        onClick={() => setView('list')}
+                        className={`${chipClass(view === 'list')} flex items-center gap-1.5`}
+                        title="리스트로 보기"
+                    >
+                        <List size={14} />
+                        List
+                    </button>
+                </div>
             </div>
 
-            {/* Project Grid */}
+            <p className="mb-6 text-xs text-white/40">
+                {canReorder
+                    ? '드래그해서 옮기거나 화살표를 쓰세요. ⌃ 는 맨 앞으로 보냅니다. 이 순서가 사이트에 그대로 반영됩니다.'
+                    : '순서 변경은 All 탭에서만 가능합니다.'}
+            </p>
+
+            {view === 'list' ? (
+                /* Compact rows — the practical way to reorder a long list. */
+                <div className="border border-white/15">
+                    {filteredProjects.map((project, index) => (
+                        <div
+                            key={project.id}
+                            draggable={canReorder && !isReordering}
+                            onDragStart={onDragStart(index)}
+                            onDragOver={onDragOver(index)}
+                            onDrop={onDrop(index)}
+                            onDragEnd={onDragEnd}
+                            className="flex items-center gap-3 border-b border-white/15 px-3 py-2 last:border-b-0 hover:bg-white/5 transition-colors duration-200 ease-[var(--ease-btn)]"
+                            style={{
+                                opacity: dragIndex === index ? 0.35 : 1,
+                                /* drop indicator */
+                                boxShadow:
+                                    overIndex === index && dragIndex !== null && dragIndex !== index
+                                        ? 'inset 0 2px 0 0 var(--accent)'
+                                        : undefined,
+                                cursor: canReorder ? 'grab' : undefined,
+                            }}
+                        >
+                            <span className="w-7 shrink-0 text-xs text-white/40 tabular-nums">
+                                {String(index + 1).padStart(2, '0')}
+                            </span>
+
+                            <div className="h-11 w-11 shrink-0 overflow-hidden bg-black">
+                                {project.mediaType === 'video' ? (
+                                    <video
+                                        src={videoSrc(project.imageUrl)}
+                                        poster={project.thumbnailUrl}
+                                        className="h-full w-full object-cover"
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                    />
+                                ) : (
+                                    <img src={project.imageUrl} alt="" className="h-full w-full object-cover" />
+                                )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm text-white">{project.title}</p>
+                                <p className="truncate text-xs text-white/50">
+                                    {[project.category, project.date].filter(Boolean).join(' · ')}
+                                </p>
+                            </div>
+
+                            <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
+                                {project.mediaType === 'video' && (
+                                    <span className="border border-white/28 px-1.5 py-0.5 text-[10px] uppercase text-white/70">
+                                        Video
+                                    </span>
+                                )}
+                                {project.isRestricted && (
+                                    <span className="border border-white/28 px-1.5 py-0.5 text-[10px] uppercase text-white/70">
+                                        Restricted
+                                    </span>
+                                )}
+                                {project.mediaType === 'video' && !project.thumbnailUrl && (
+                                    <span className="border border-white/60 px-1.5 py-0.5 text-[10px] text-white">
+                                        썸네일 없음
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-1">
+                                {canReorder && (
+                                    <>
+                                        <button
+                                            onClick={() => moveTo(index, 0)}
+                                            disabled={index === 0 || isReordering}
+                                            title="맨 앞으로"
+                                            aria-label="맨 앞으로 이동"
+                                            className="border border-white/28 p-1 text-white hover:border-white disabled:opacity-30 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                        >
+                                            <ChevronsUp size={12} />
+                                        </button>
+                                        <button
+                                            onClick={() => moveProject(index, -1)}
+                                            disabled={index === 0 || isReordering}
+                                            title="앞으로"
+                                            aria-label="앞으로 이동"
+                                            className="border border-white/28 p-1 text-white hover:border-white disabled:opacity-30 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                        >
+                                            <ArrowUp size={12} />
+                                        </button>
+                                        <button
+                                            onClick={() => moveProject(index, 1)}
+                                            disabled={index === projects.length - 1 || isReordering}
+                                            title="뒤로"
+                                            aria-label="뒤로 이동"
+                                            className="border border-white/28 p-1 text-white hover:border-white disabled:opacity-30 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                        >
+                                            <ArrowDown size={12} />
+                                        </button>
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => handleEdit(project)}
+                                    className="bg-white px-3 py-1 text-xs font-medium uppercase text-black hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleToggleVisibility(project)}
+                                    title={project.isRestricted ? '공개로 전환' : '비공개로 전환'}
+                                    className="border border-white/28 p-1.5 text-white hover:border-white transition-colors duration-200 ease-[var(--ease-btn)]"
+                                >
+                                    {project.isRestricted ? <EyeOff size={12} /> : <Eye size={12} />}
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(project.id)}
+                                    title="삭제"
+                                    className="bg-red-500/80 p-1.5 text-white hover:bg-red-500 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                >
+                                    <Trash2 size={12} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+
+            /* Project Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredProjects.map((project, index) => (
                     <motion.div
@@ -389,17 +644,33 @@ export default function ProjectManager() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
-                        className="bg-white/5 border-2 border-white/20 overflow-hidden hover:border-white/40 transition-all group"
+                        draggable={canReorder && !isReordering}
+                        onDragStart={onDragStart(index)}
+                        onDragOver={onDragOver(index)}
+                        onDrop={onDrop(index)}
+                        onDragEnd={onDragEnd}
+                        className="bg-white/5 border border-white/15 overflow-hidden hover:border-white/28 transition-colors duration-200 ease-[var(--ease-btn)] group"
+                        style={{
+                            opacity: dragIndex === index ? 0.35 : undefined,
+                            outline:
+                                overIndex === index && dragIndex !== null && dragIndex !== index
+                                    ? '2px solid var(--accent)'
+                                    : undefined,
+                            outlineOffset: -2,
+                            cursor: canReorder ? 'grab' : undefined,
+                        }}
                     >
                         {/* Media */}
                         <div className="relative aspect-[4/5] bg-black overflow-hidden">
                             {project.mediaType === 'video' ? (
                                 <video
-                                    src={project.imageUrl}
+                                    src={videoSrc(project.imageUrl)}
+                                    poster={project.thumbnailUrl}
                                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-300"
                                     muted
                                     loop
                                     playsInline
+                                    preload="metadata"
                                 />
                             ) : (
                                 <img
@@ -410,43 +681,86 @@ export default function ProjectManager() {
                             )}
                             <div className="absolute top-2 right-2 flex gap-1 flex-col items-end">
                                 {project.mediaType === 'video' && (
-                                    <span className="bg-white/90 text-black px-2 py-1 text-[10px] font-bold uppercase flex items-center gap-1">
+                                    <span className="bg-white text-black px-2 py-1 text-[10px] font-medium uppercase tracking-wide flex items-center gap-1">
                                         <Film size={10} />
                                         Video
                                     </span>
                                 )}
                                 {project.isRestricted && (
-                                    <span className="bg-white/90 text-black px-2 py-1 text-[10px] font-bold uppercase">
+                                    <span className="bg-white text-black px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
                                         Restricted
                                     </span>
                                 )}
+                                {/* Without a thumbnail the card falls back to the
+                                  * first video frame — flag it so it gets fixed. */}
+                                {project.mediaType === 'video' && !project.thumbnailUrl && (
+                                    <span className="border border-white/60 text-white px-2 py-1 text-[10px] font-medium tracking-wide">
+                                        썸네일 없음
+                                    </span>
+                                )}
                             </div>
+
+                            {/* Display-order controls */}
+                            {canReorder && (
+                                <div className="absolute top-2 left-2 flex items-center gap-1">
+                                    <span className="bg-black/70 text-white px-2 py-1 text-[10px] font-medium tabular-nums">
+                                        {String(index + 1).padStart(2, '0')}
+                                    </span>
+                                    <button
+                                        onClick={() => moveTo(index, 0)}
+                                        disabled={index === 0 || isReordering}
+                                        title="맨 앞으로"
+                                        aria-label="맨 앞으로 이동"
+                                        className="bg-black/70 text-white p-1 border border-white/28 hover:border-white disabled:opacity-30 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                    >
+                                        <ChevronsUp size={12} />
+                                    </button>
+                                    <button
+                                        onClick={() => moveProject(index, -1)}
+                                        disabled={index === 0 || isReordering}
+                                        title="앞으로"
+                                        aria-label="앞으로 이동"
+                                        className="bg-black/70 text-white p-1 border border-white/28 hover:border-white disabled:opacity-30 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                    >
+                                        <ArrowUp size={12} />
+                                    </button>
+                                    <button
+                                        onClick={() => moveProject(index, 1)}
+                                        disabled={index === projects.length - 1 || isReordering}
+                                        title="뒤로"
+                                        aria-label="뒤로 이동"
+                                        className="bg-black/70 text-white p-1 border border-white/28 hover:border-white disabled:opacity-30 transition-colors duration-200 ease-[var(--ease-btn)]"
+                                    >
+                                        <ArrowDown size={12} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Info */}
                         <div className="p-3">
-                            <h3 className="font-bold text-sm mb-1 truncate">{project.title}</h3>
-                            <p className="text-xs text-white/60 mb-3 truncate">{project.category}</p>
+                            <h3 className="font-medium text-sm mb-1 truncate text-white">{project.title}</h3>
+                            <p className="text-xs text-white/50 mb-3 truncate">{project.category}</p>
 
                             {/* Actions */}
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => handleEdit(project)}
-                                    className="flex-1 bg-white text-black px-2 py-1.5 text-xs font-bold uppercase hover:bg-white/90 transition-colors flex items-center justify-center gap-1"
+                                    className="flex-1 bg-white text-black px-2 py-1.5 text-xs font-medium uppercase hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] flex items-center justify-center gap-1"
                                 >
                                     <Edit size={12} />
                                     Edit
                                 </button>
                                 <button
                                     onClick={() => handleToggleVisibility(project)}
-                                    className="bg-white/20 text-white px-2 py-1.5 text-xs hover:bg-white/30 transition-colors border border-white/40"
+                                    className="text-white px-2 py-1.5 text-xs border border-white/28 hover:border-white transition-colors duration-200 ease-[var(--ease-btn)]"
                                     title={project.isRestricted ? 'Make Visible' : 'Make Restricted'}
                                 >
                                     {project.isRestricted ? <EyeOff size={12} /> : <Eye size={12} />}
                                 </button>
                                 <button
                                     onClick={() => handleDelete(project.id)}
-                                    className="bg-red-500/80 text-white px-2 py-1.5 text-xs hover:bg-red-500 transition-colors"
+                                    className="bg-red-500/80 text-white px-2 py-1.5 text-xs hover:bg-red-500 transition-colors duration-200 ease-[var(--ease-btn)]"
                                     title="Delete"
                                 >
                                     <Trash2 size={12} />
@@ -456,6 +770,7 @@ export default function ProjectManager() {
                     </motion.div>
                 ))}
             </div>
+            )}
 
             {/* Add New Modal */}
             <AnimatePresence>
@@ -472,14 +787,14 @@ export default function ProjectManager() {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                            className="bg-black border-2 border-white/40 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                            className="bg-black border border-white/28 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                         >
                             {/* Header */}
-                            <div className="border-b-2 border-white/30 p-4 flex items-center justify-between sticky top-0 bg-black z-10">
-                                <h2 className="text-xl font-bold uppercase tracking-wide">Add New Project</h2>
+                            <div className="border-b border-white/15 p-4 flex items-center justify-between sticky top-0 bg-black z-10">
+                                <h2 className="text-xl text-white" style={headingStyle}>Add New Project</h2>
                                 <button
                                     onClick={() => { setShowAddModal(false); setSelectedAdditionalFiles([]); setUploadProgress(0); }}
-                                    className="text-white hover:text-white/70 transition-colors"
+                                    className="text-white/70 hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]"
                                 >
                                     <X size={24} />
                                 </button>
@@ -489,32 +804,32 @@ export default function ProjectManager() {
                             <div className="p-6 space-y-6">
                                 {/* Media Type Switch */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Media Source
+                                    <label className={labelClass}>
+                                        Media Source
                                     </label>
                                     <div className="flex gap-6 mb-4 mt-2">
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={newProject.mediaType !== 'youtube'} onChange={() => setNewProject({ ...newProject, mediaType: 'image' })} /> Direct Upload (Image/Video)</label>
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={newProject.mediaType === 'youtube'} onChange={() => setNewProject({ ...newProject, mediaType: 'youtube' })} /> YouTube Link</label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-white/70"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={newProject.mediaType !== 'youtube'} onChange={() => setNewProject({ ...newProject, mediaType: 'image' })} /> Direct Upload (Image/Video)</label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-white/70"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={newProject.mediaType === 'youtube'} onChange={() => setNewProject({ ...newProject, mediaType: 'youtube' })} /> YouTube Link</label>
                                     </div>
                                 </div>
 
                                 {/* YouTube Input */}
                                 {newProject.mediaType === 'youtube' && (
                                     <div>
-                                        <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                            &gt; YouTube URL
+                                        <label className={labelClass}>
+                                            YouTube URL
                                         </label>
-                                        <input type="text" value={newProject.youtubeUrl || ''} onChange={(e) => setNewProject({ ...newProject, youtubeUrl: e.target.value })} className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all font-mono text-sm" placeholder="e.g. https://www.youtube.com/watch?v=..." />
-                                        <p className="text-xs text-[#ff3366] mt-2">A YouTube link reduces server load. Please also provide a Thumbnail Image below for the 3D space.</p>
+                                        <input type="text" value={newProject.youtubeUrl || ''} onChange={(e) => setNewProject({ ...newProject, youtubeUrl: e.target.value })} className={`${inputClass} text-sm`} placeholder="e.g. https://www.youtube.com/watch?v=..." />
+                                        <p className="text-xs text-white/50 mt-2">YouTube 링크를 쓰면 서버 부담이 줄어듭니다. 목록에 노출될 썸네일 이미지를 아래에서 함께 등록해 주세요.</p>
                                     </div>
                                 )}
 
                                 {/* File Upload */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; {newProject.mediaType === 'youtube' ? 'Upload 3D Thumbnail Image' : 'Upload Image or Video'}
+                                    <label className={labelClass}>
+                                        {newProject.mediaType === 'youtube' ? '썸네일 이미지 업로드' : '이미지 또는 영상 업로드'}
                                     </label>
-                                    <div className="border-2 border-dashed border-white/30 p-6 text-center hover:border-white/50 transition-colors">
+                                    <div className={`${dropZoneClass} p-6`}>
                                         <input
                                             type="file"
                                             accept="image/*,video/*"
@@ -526,23 +841,25 @@ export default function ProjectManager() {
                                             htmlFor="file-upload-new"
                                             className="cursor-pointer flex flex-col items-center gap-3"
                                         >
-                                            <Upload size={32} className="text-white/60" />
-                                            <span className="text-sm text-white/60">
+                                            <Upload size={28} className="text-white/50" />
+                                            <span className="text-sm text-white/50">
                                                 Click to upload or drag and drop
                                             </span>
-                                            <span className="text-xs text-white/40">
+                                            <span className="text-xs text-white/35">
                                                 Images: JPG, PNG, GIF / Videos: MP4, WebM, MOV
                                             </span>
                                         </label>
                                     </div>
                                     {newProject.imageUrl && (
-                                        <div className="mt-4 border-2 border-white/20 p-2">
-                                            <p className="text-xs text-white/60 mb-2 uppercase">Preview:</p>
+                                        <div className="mt-4 border border-white/15 p-2">
+                                            <p className="text-xs text-white/50 mb-2 uppercase">Preview:</p>
                                             {newProject.mediaType === 'video' ? (
                                                 <video
-                                                    src={newProject.imageUrl}
+                                                    src={videoSrc(newProject.imageUrl)}
+                                                    poster={newProject.thumbnailUrl}
                                                     className="w-full max-h-64 object-contain"
                                                     controls
+                                                    preload="metadata"
                                                 />
                                             ) : (
                                                 <img
@@ -558,10 +875,10 @@ export default function ProjectManager() {
                                 {/* Thumbnail Upload (Only for Video) */}
                                 {newProject.mediaType === 'video' && (
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Upload Thumbnail Image (Required for video)
+                                    <label className={labelClass}>
+                                        Upload Thumbnail Image (Required for video)
                                     </label>
-                                    <div className="border-2 border-dashed border-white/30 p-4 text-center hover:border-white/50 transition-colors bg-white/5">
+                                    <div className={`${dropZoneClass} p-4 bg-white/5`}>
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -573,24 +890,24 @@ export default function ProjectManager() {
                                             htmlFor="thumbnail-upload-new"
                                             className="cursor-pointer flex flex-col items-center gap-2"
                                         >
-                                            <Upload size={24} className="text-[#ff3366]/80" />
-                                            <span className="text-xs text-white/80">
+                                            <Upload size={24} className="text-white/50" />
+                                            <span className="text-xs text-white/70">
                                                 Click to upload thumbnail (JPG, PNG)
                                             </span>
                                         </label>
                                     </div>
                                     {newProject.thumbnailUrl && (
-                                        <div className="mt-2 text-xs text-[#00ff88]">Thumbnail selected.</div>
+                                        <div className="mt-2 text-xs text-white/70">Thumbnail selected.</div>
                                     )}
                                 </div>
                                 )}
 
                                 {/* Additional Media Upload */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Additional Sub Media (Optional)
+                                    <label className={labelClass}>
+                                        Additional Sub Media (Optional)
                                     </label>
-                                    <div className="border-2 border-dashed border-white/30 p-4 text-center hover:border-white/50 transition-colors">
+                                    <div className={`${dropZoneClass} p-4`}>
                                         <input
                                             type="file"
                                             multiple
@@ -603,8 +920,8 @@ export default function ProjectManager() {
                                             htmlFor="additional-files-new"
                                             className="cursor-pointer flex flex-col items-center gap-2"
                                         >
-                                            <Plus size={24} className="text-white/80" />
-                                            <span className="text-xs text-white/80 uppercase">
+                                            <Plus size={24} className="text-white/70" />
+                                            <span className="text-xs text-white/70 uppercase">
                                                 Add multiple sub images or videos
                                             </span>
                                         </label>
@@ -612,9 +929,9 @@ export default function ProjectManager() {
                                     {selectedAdditionalFiles.length > 0 && (
                                         <div className="mt-3 flex flex-col gap-2">
                                             {selectedAdditionalFiles.map((file, idx) => (
-                                                <div key={idx} className="flex justify-between items-center text-xs p-2 bg-white/10 border border-white/20">
+                                                <div key={idx} className="flex justify-between items-center text-xs p-2 bg-white/5 border border-white/15">
                                                     <span className="truncate w-[80%]">{file.name}</span>
-                                                    <button onClick={() => removeAdditionalFile(idx)} className="text-red-400 hover:text-red-300">
+                                                    <button onClick={() => removeAdditionalFile(idx)} className="text-red-500/80 hover:text-red-500 transition-colors duration-200 ease-[var(--ease-btn)]">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -625,73 +942,74 @@ export default function ProjectManager() {
 
                                 {/* Title */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Title
+                                    <label className={labelClass}>
+                                        Title
                                     </label>
                                     <input
                                         type="text"
                                         value={newProject.title}
                                         onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                                        className={inputClass}
                                         placeholder="Project Title"
                                     />
                                 </div>
 
                                 {/* Category */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Category
+                                    <label className={labelClass}>
+                                        Category
                                     </label>
-                                    <select
+                                    <input
+                                        type="text"
+                                        list="strato-categories"
                                         value={newProject.category}
-                                        onChange={(e) => setNewProject({ ...newProject, category: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all appearance-none uppercase"
-                                    >
-                                        <option value="FASHION" className="text-black">FASHION</option>
-                                        <option value="BEAUTY" className="text-black">BEAUTY</option>
-                                        <option value="EDUCATION" className="text-black">EDUCATION</option>
-                                        <option value="OTHER" className="text-black">OTHER</option>
-                                    </select>
+                                        onChange={(e) => setNewProject({ ...newProject, category: e.target.value.toUpperCase() })}
+                                        className={`${inputClass} uppercase`}
+                                        placeholder="예: FASHION"
+                                    />
+                                    <p className="text-xs text-white/40 mt-2">
+                                        기존 카테고리에서 고르거나 새로 입력할 수 있습니다. 사이트 필터는 실제 등록된 카테고리를 따라갑니다.
+                                    </p>
                                 </div>
 
                                 {/* Description */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Description
+                                    <label className={labelClass}>
+                                        Description
                                     </label>
                                     <textarea
                                         value={newProject.description}
                                         onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                                         rows={4}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all resize-none"
+                                        className={`${inputClass} resize-none`}
                                         placeholder="Project description..."
                                     />
                                 </div>
 
                                 {/* Date */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Date Range
+                                    <label className={labelClass}>
+                                        Date Range
                                     </label>
                                     <input
                                         type="text"
                                         value={newProject.date}
                                         onChange={(e) => setNewProject({ ...newProject, date: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                                        className={inputClass}
                                         placeholder="2025.10 — 2026.03"
                                     />
                                 </div>
 
                                 {/* Location */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Location (Optional)
+                                    <label className={labelClass}>
+                                        Location (Optional)
                                     </label>
                                     <input
                                         type="text"
                                         value={newProject.location || ''}
                                         onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                                        className={inputClass}
                                         placeholder="e.g., Hyundai Dept. Trade Center"
                                     />
                                 </div>
@@ -713,22 +1031,22 @@ export default function ProjectManager() {
 
                                 {/* Actions */}
                                 {uploadProgress > 0 && uploadProgress < 100 && (
-                                    <div className="w-full h-1 bg-white/20 mt-4 rounded">
+                                    <div className="w-full h-1 bg-white/15 mt-4">
                                         <div className="h-full bg-white transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                                     </div>
                                 )}
-                                <div className="flex gap-3 pt-4 border-t-2 border-white/20">
+                                <div className="flex gap-3 pt-4 border-t border-white/15">
                                     <button
                                         onClick={handleAddNew}
                                         disabled={!newProject.title || !newProject.imageUrl || (uploadProgress > 0 && uploadProgress < 100)}
-                                        className="flex-1 bg-white text-black px-6 py-3 font-bold uppercase tracking-wide hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        className="flex-1 bg-white text-black px-6 py-3 font-medium uppercase tracking-wide hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         <Plus size={18} />
                                         {uploadProgress > 0 && uploadProgress < 100 ? 'Uploading...' : 'Add Project'}
                                     </button>
                                     <button
                                         onClick={() => setShowAddModal(false)}
-                                        className="px-6 py-3 border-2 border-white/40 text-white font-bold uppercase tracking-wide hover:bg-white/10 transition-colors"
+                                        className="px-6 py-3 border border-white/28 text-white font-medium uppercase tracking-wide hover:border-white transition-colors duration-200 ease-[var(--ease-btn)]"
                                     >
                                         Cancel
                                     </button>
@@ -754,14 +1072,14 @@ export default function ProjectManager() {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                            className="bg-black border-2 border-white/40 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                            className="bg-black border border-white/28 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                         >
                             {/* Header */}
-                            <div className="border-b-2 border-white/30 p-4 flex items-center justify-between sticky top-0 bg-black z-10">
-                                <h2 className="text-xl font-bold uppercase tracking-wide">Edit Project</h2>
+                            <div className="border-b border-white/15 p-4 flex items-center justify-between sticky top-0 bg-black z-10">
+                                <h2 className="text-xl text-white" style={headingStyle}>Edit Project</h2>
                                 <button
                                     onClick={() => { setIsEditing(false); setSelectedAdditionalFiles([]); setUploadProgress(0); }}
-                                    className="text-white hover:text-white/70 transition-colors"
+                                    className="text-white/70 hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]"
                                 >
                                     <X size={24} />
                                 </button>
@@ -771,34 +1089,40 @@ export default function ProjectManager() {
                             <div className="p-6 space-y-6">
                                 {/* Media Type Switch */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Media Source
+                                    <label className={labelClass}>
+                                        Media Source
                                     </label>
                                     <div className="flex gap-6 mb-4 mt-2">
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={editForm.mediaType !== 'youtube'} onChange={() => setEditForm({ ...editForm, mediaType: 'image' })} /> Direct Upload (Image/Video)</label>
-                                        <label className="flex items-center gap-2 cursor-pointer text-sm font-mono text-white/80"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={editForm.mediaType === 'youtube'} onChange={() => setEditForm({ ...editForm, mediaType: 'youtube' })} /> YouTube Link</label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-white/70"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={editForm.mediaType !== 'youtube'} onChange={() => setEditForm({ ...editForm, mediaType: 'image' })} /> Direct Upload (Image/Video)</label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-white/70"><input type="radio" className="accent-white cursor-pointer w-4 h-4" checked={editForm.mediaType === 'youtube'} onChange={() => setEditForm({ ...editForm, mediaType: 'youtube' })} /> YouTube Link</label>
                                     </div>
                                 </div>
 
                                 {/* YouTube Input */}
                                 {editForm.mediaType === 'youtube' && (
                                     <div>
-                                        <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                            &gt; YouTube URL
+                                        <label className={labelClass}>
+                                            YouTube URL
                                         </label>
-                                        <input type="text" value={editForm.youtubeUrl || ''} onChange={(e) => setEditForm({ ...editForm, youtubeUrl: e.target.value })} className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all font-mono text-sm" placeholder="e.g. https://www.youtube.com/watch?v=..." />
-                                        <p className="text-xs text-[#ff3366] mt-2">A YouTube link reduces server load. Please ensure a Thumbnail Image is uploaded for the 3D space.</p>
+                                        <input type="text" value={editForm.youtubeUrl || ''} onChange={(e) => setEditForm({ ...editForm, youtubeUrl: e.target.value })} className={`${inputClass} text-sm`} placeholder="e.g. https://www.youtube.com/watch?v=..." />
+                                        <p className="text-xs text-white/50 mt-2">YouTube 링크를 쓰면 서버 부담이 줄어듭니다. 목록에 노출될 썸네일 이미지가 등록돼 있는지 확인해 주세요.</p>
                                     </div>
                                 )}
 
                                 {/* Current Media Preview */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Current Thumbnail / Media
+                                    <label className={labelClass}>
+                                        Current Thumbnail / Media
                                     </label>
-                                    <div className="aspect-[4/5] max-w-xs bg-black border-2 border-white/20">
+                                    <div className="aspect-[4/5] max-w-xs bg-black border border-white/15">
                                         {editForm.mediaType === 'video' ? (
-                                            <video src={editForm.imageUrl} className="w-full h-full object-cover" controls />
+                                            <video
+                                                src={videoSrc(editForm.imageUrl)}
+                                                poster={editForm.thumbnailUrl}
+                                                className="w-full h-full object-cover"
+                                                controls
+                                                preload="metadata"
+                                            />
                                         ) : (
                                             <img src={editForm.imageUrl} alt="" className="w-full h-full object-cover" />
                                         )}
@@ -807,10 +1131,10 @@ export default function ProjectManager() {
 
                                 {/* File Upload */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Replace Media (Optional)
+                                    <label className={labelClass}>
+                                        Replace Media (Optional)
                                     </label>
-                                    <div className="border-2 border-dashed border-white/30 p-4 text-center hover:border-white/50 transition-colors">
+                                    <div className={`${dropZoneClass} p-4`}>
                                         <input
                                             type="file"
                                             accept="image/*,video/*"
@@ -822,8 +1146,8 @@ export default function ProjectManager() {
                                             htmlFor="file-upload-edit"
                                             className="cursor-pointer flex flex-col items-center gap-2"
                                         >
-                                            <Upload size={24} className="text-white/60" />
-                                            <span className="text-xs text-white/60">
+                                            <Upload size={24} className="text-white/50" />
+                                            <span className="text-xs text-white/50">
                                                 Click to upload new media
                                             </span>
                                         </label>
@@ -833,13 +1157,13 @@ export default function ProjectManager() {
                                 {/* Thumbnail Replace (Only for Video) */}
                                 {editForm.mediaType === 'video' && (
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Update Thumbnail Image
+                                    <label className={labelClass}>
+                                        Update Thumbnail Image
                                     </label>
                                     {editForm.thumbnailUrl && (
                                         <img src={editForm.thumbnailUrl} alt="Thumbnail" className="w-24 h-24 object-cover border border-white/20 mb-2" />
                                     )}
-                                    <div className="border-2 border-dashed border-white/30 p-4 text-center hover:border-white/50 transition-colors bg-white/5">
+                                    <div className={`${dropZoneClass} p-4 bg-white/5`}>
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -851,8 +1175,8 @@ export default function ProjectManager() {
                                             htmlFor="thumbnail-upload-edit"
                                             className="cursor-pointer flex flex-col items-center gap-2"
                                         >
-                                            <Upload size={24} className="text-[#ff3366]/80" />
-                                            <span className="text-xs text-white/80">
+                                            <Upload size={24} className="text-white/50" />
+                                            <span className="text-xs text-white/70">
                                                 Click to replace thumbnail
                                             </span>
                                         </label>
@@ -862,8 +1186,8 @@ export default function ProjectManager() {
 
                                 {/* Edit Additional Media */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Additional Sub Media
+                                    <label className={labelClass}>
+                                        Additional Sub Media
                                     </label>
                                     
                                     {/* Existing Media */}
@@ -874,12 +1198,17 @@ export default function ProjectManager() {
                                                 {editForm.additionalMedia.map((media, idx) => (
                                                     <div key={idx} className="relative w-24 h-24 shrink-0 border border-white/20 bg-black group">
                                                         {media.type === 'video' ? (
-                                                            <video src={media.url} className="w-full h-full object-cover" />
+                                                            <video
+                                                                src={videoSrc(media.url)}
+                                                                poster={media.thumbnail}
+                                                                className="w-full h-full object-cover"
+                                                                preload="metadata"
+                                                            />
                                                         ) : (
                                                             <img src={media.url} alt="" className="w-full h-full object-cover" />
                                                         )}
                                                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <button onClick={() => removeExistingAdditionalMedia(idx)} className="text-red-400 hover:text-red-300">
+                                                            <button onClick={() => removeExistingAdditionalMedia(idx)} className="text-red-500/80 hover:text-red-500 transition-colors duration-200 ease-[var(--ease-btn)]">
                                                                 <Trash2 size={20} />
                                                             </button>
                                                         </div>
@@ -890,7 +1219,7 @@ export default function ProjectManager() {
                                     )}
 
                                     {/* Add New Additional Media */}
-                                    <div className="border-2 border-dashed border-white/30 p-4 text-center hover:border-white/50 transition-colors">
+                                    <div className={`${dropZoneClass} p-4`}>
                                         <input
                                             type="file"
                                             multiple
@@ -903,8 +1232,8 @@ export default function ProjectManager() {
                                             htmlFor="additional-files-edit"
                                             className="cursor-pointer flex flex-col items-center gap-2"
                                         >
-                                            <Plus size={24} className="text-white/80" />
-                                            <span className="text-xs text-white/80 uppercase">
+                                            <Plus size={24} className="text-white/70" />
+                                            <span className="text-xs text-white/70 uppercase">
                                                 Add multiple sub images or videos
                                             </span>
                                         </label>
@@ -913,9 +1242,9 @@ export default function ProjectManager() {
                                         <div className="mt-3 flex flex-col gap-2">
                                             <p className="text-xs text-white/50 uppercase">New Media to Upload:</p>
                                             {selectedAdditionalFiles.map((file, idx) => (
-                                                <div key={idx} className="flex justify-between items-center text-xs p-2 bg-white/10 border border-white/20">
+                                                <div key={idx} className="flex justify-between items-center text-xs p-2 bg-white/5 border border-white/15">
                                                     <span className="truncate w-[80%]">{file.name}</span>
-                                                    <button onClick={() => removeAdditionalFile(idx)} className="text-red-400 hover:text-red-300">
+                                                    <button onClick={() => removeAdditionalFile(idx)} className="text-red-500/80 hover:text-red-500 transition-colors duration-200 ease-[var(--ease-btn)]">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -926,71 +1255,72 @@ export default function ProjectManager() {
 
                                 {/* Title */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Title
+                                    <label className={labelClass}>
+                                        Title
                                     </label>
                                     <input
                                         type="text"
                                         value={editForm.title}
                                         onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                                        className={inputClass}
                                     />
                                 </div>
 
                                 {/* Category */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Category
+                                    <label className={labelClass}>
+                                        Category
                                     </label>
-                                    <select
+                                    <input
+                                        type="text"
+                                        list="strato-categories"
                                         value={editForm.category}
-                                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all appearance-none uppercase"
-                                    >
-                                        <option value="FASHION" className="text-black">FASHION</option>
-                                        <option value="BEAUTY" className="text-black">BEAUTY</option>
-                                        <option value="EDUCATION" className="text-black">EDUCATION</option>
-                                        <option value="OTHER" className="text-black">OTHER</option>
-                                    </select>
+                                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value.toUpperCase() })}
+                                        className={`${inputClass} uppercase`}
+                                        placeholder="예: FASHION"
+                                    />
+                                    <p className="text-xs text-white/40 mt-2">
+                                        기존 카테고리에서 고르거나 새로 입력할 수 있습니다.
+                                    </p>
                                 </div>
 
                                 {/* Description */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Description
+                                    <label className={labelClass}>
+                                        Description
                                     </label>
                                     <textarea
                                         value={editForm.description}
                                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                                         rows={4}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all resize-none"
+                                        className={`${inputClass} resize-none`}
                                     />
                                 </div>
 
                                 {/* Date */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Date Range
+                                    <label className={labelClass}>
+                                        Date Range
                                     </label>
                                     <input
                                         type="text"
                                         value={editForm.date}
                                         onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                                        className={inputClass}
                                         placeholder="2025.10 — 2026.03"
                                     />
                                 </div>
 
                                 {/* Location */}
                                 <div>
-                                    <label className="block text-sm mb-2 uppercase tracking-wide text-white/70">
-                                        &gt; Location (Optional)
+                                    <label className={labelClass}>
+                                        Location (Optional)
                                     </label>
                                     <input
                                         type="text"
                                         value={editForm.location || ''}
                                         onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                                        className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                                        className={inputClass}
                                         placeholder="e.g., Hyundai Dept. Trade Center"
                                     />
                                 </div>
@@ -1012,22 +1342,22 @@ export default function ProjectManager() {
 
                                 {/* Actions */}
                                 {uploadProgress > 0 && uploadProgress < 100 && (
-                                    <div className="w-full h-1 bg-white/20 mt-4 rounded">
+                                    <div className="w-full h-1 bg-white/15 mt-4">
                                         <div className="h-full bg-white transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                                     </div>
                                 )}
-                                <div className="flex gap-3 pt-4 border-t-2 border-white/20">
+                                <div className="flex gap-3 pt-4 border-t border-white/15">
                                     <button
                                         onClick={handleSave}
                                         disabled={!editForm.title || !editForm.imageUrl || (uploadProgress > 0 && uploadProgress < 100)}
-                                        className="flex-1 bg-white text-black px-6 py-3 font-bold uppercase tracking-wide hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        className="flex-1 bg-white text-black px-6 py-3 font-medium uppercase tracking-wide hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         <Save size={18} />
                                         {uploadProgress > 0 && uploadProgress < 100 ? 'Uploading...' : 'Save Changes'}
                                     </button>
                                     <button
                                         onClick={() => { setIsEditing(false); setSelectedAdditionalFiles([]); setUploadProgress(0); }}
-                                        className="px-6 py-3 border-2 border-white/40 text-white font-bold uppercase tracking-wide hover:bg-white/10 transition-colors"
+                                        className="px-6 py-3 border border-white/28 text-white font-medium uppercase tracking-wide hover:border-white transition-colors duration-200 ease-[var(--ease-btn)]"
                                     >
                                         Cancel
                                     </button>

@@ -3,8 +3,9 @@ import { motion } from 'motion/react';
 import { Link2, Instagram, Save, ExternalLink } from 'lucide-react';
 import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { SANS, SERIF } from '../theme';
 
-const fontMono = "'Space Mono', monospace";
+const headingStyle = { fontFamily: SERIF, fontWeight: 400, letterSpacing: '-0.01em' } as const;
 
 interface SocialLink {
     id: string;
@@ -64,41 +65,42 @@ export default function SocialLinksManager() {
     };
 
     return (
-        <div style={{ fontFamily: fontMono }}>
+        <div style={{ fontFamily: SANS }}>
             {/* Header */}
             <div className="mb-8">
                 <motion.h1
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="text-3xl font-bold mb-2 uppercase tracking-wider flex items-center gap-3"
+                    className="text-3xl mb-2 flex items-center gap-3 text-white"
+                    style={headingStyle}
                 >
-                    <Link2 size={32} className="text-white" />
+                    <Link2 size={28} className="text-white" />
                     Social Links
                 </motion.h1>
-                <p className="text-sm text-white/60">&gt; Manage social media and external links</p>
+                <p className="text-sm text-white/50">사이트에 노출되는 소셜 링크와 연락 이메일을 관리합니다</p>
             </div>
 
-            {/* Instagram Highlight */}
+            {/* Instagram Highlight — emphasis via a full-white hairline, not colour */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="mb-8 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 border-2 border-pink-400/40 p-6"
+                className="mb-8 bg-white/5 border border-white p-6"
             >
                 <div className="flex items-center gap-3 mb-4">
-                    <Instagram size={32} className="text-pink-400" />
-                    <h2 className="text-2xl font-bold uppercase tracking-wide">Instagram</h2>
+                    <Instagram size={28} className="text-white" />
+                    <h2 className="text-2xl text-white" style={headingStyle}>Instagram</h2>
                 </div>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-xs mb-2 uppercase tracking-wide text-white/70">
-                            &gt; Instagram URL
+                        <label className="block text-xs mb-2 uppercase tracking-wide text-white/50">
+                            Instagram URL
                         </label>
                         <input
                             type="url"
                             value={links.find(l => l.id === 'instagram')?.url || ''}
                             onChange={(e) => handleUpdate('instagram', 'url', e.target.value)}
-                            className="w-full bg-white/5 border-2 border-pink-400/40 px-3 py-2 text-white outline-none focus:border-pink-400/70 transition-all"
+                            className="w-full bg-white/[0.04] border border-white/15 px-3 py-2 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)]"
                             placeholder="https://instagram.com/yourusername"
                         />
                     </div>
@@ -108,9 +110,9 @@ export default function SocialLinksManager() {
                                 type="checkbox"
                                 checked={links.find(l => l.id === 'instagram')?.enabled || false}
                                 onChange={(e) => handleUpdate('instagram', 'enabled', e.target.checked)}
-                                className="w-5 h-5 accent-pink-400"
+                                className="w-5 h-5 accent-white"
                             />
-                            <span className="text-sm uppercase tracking-wide">
+                            <span className="text-sm uppercase tracking-wide text-white/70">
                                 Show on Contact Page
                             </span>
                         </label>
@@ -119,7 +121,7 @@ export default function SocialLinksManager() {
                                 href={links.find(l => l.id === 'instagram')?.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-pink-400 hover:text-pink-300 transition-colors flex items-center gap-1"
+                                className="text-sm text-white/70 hover:text-white transition-colors duration-200 ease-[var(--ease-btn)] flex items-center gap-1"
                             >
                                 Preview
                                 <ExternalLink size={14} />
@@ -131,7 +133,7 @@ export default function SocialLinksManager() {
 
             {/* Other Social Links */}
             <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 uppercase tracking-wider">&gt; Other Social Links</h2>
+                <h2 className="text-xl mb-4 text-white" style={headingStyle}>Other Social Links</h2>
                 <div className="space-y-4">
                     {links.filter(link => link.id !== 'instagram').map((link, index) => (
                         <motion.div
@@ -139,12 +141,12 @@ export default function SocialLinksManager() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 + index * 0.1 }}
-                            className="bg-white/5 border-2 border-white/20 p-4"
+                            className="bg-white/5 border border-white/15 p-4"
                         >
                             <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-bold uppercase tracking-wide">{link.name}</h3>
+                                <h3 className="font-medium uppercase tracking-wide text-white">{link.name}</h3>
                                 <label className="flex items-center gap-2 cursor-pointer">
-                                    <span className="text-xs text-white/60 uppercase">Enabled</span>
+                                    <span className="text-xs text-white/50 uppercase">Enabled</span>
                                     <input
                                         type="checkbox"
                                         checked={link.enabled}
@@ -158,7 +160,7 @@ export default function SocialLinksManager() {
                                     type="url"
                                     value={link.url}
                                     onChange={(e) => handleUpdate(link.id, 'url', e.target.value)}
-                                    className="flex-1 bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all text-sm"
+                                    className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-2 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] text-sm"
                                     placeholder={`https://${link.id}.com/yourusername`}
                                 />
                                 {link.url && (
@@ -166,7 +168,7 @@ export default function SocialLinksManager() {
                                         href={link.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="bg-white/10 text-white px-3 py-2 text-xs hover:bg-white/20 transition-colors border-2 border-white/20 flex items-center gap-1"
+                                        className="text-white px-3 py-2 text-xs border border-white/28 hover:border-white transition-colors duration-200 ease-[var(--ease-btn)] flex items-center gap-1"
                                     >
                                         <ExternalLink size={14} />
                                     </a>
@@ -182,22 +184,22 @@ export default function SocialLinksManager() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="mb-8 bg-white/5 border-2 border-white/20 p-6"
+                className="mb-8 bg-white/5 border border-white/15 p-6"
             >
-                <h2 className="text-xl font-bold mb-4 uppercase tracking-wider">&gt; Email Configuration</h2>
+                <h2 className="text-xl mb-4 text-white" style={headingStyle}>Email Configuration</h2>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-xs mb-2 uppercase tracking-wide text-white/70">
-                            &gt; Contact Email
+                        <label className="block text-xs mb-2 uppercase tracking-wide text-white/50">
+                            Contact Email
                         </label>
                         <input
                             type="email"
                             value={contactEmail}
                             onChange={(e) => setContactEmail(e.target.value)}
-                            className="w-full bg-white/5 border-2 border-white/20 px-3 py-2 text-white outline-none focus:border-white/50 transition-all"
+                            className="w-full bg-white/[0.04] border border-white/15 px-3 py-2 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)]"
                             placeholder="contact@yourdomain.com"
                         />
-                        <p className="text-xs text-white/50 mt-1">Email address where contact form submissions will be sent</p>
+                        <p className="text-xs text-white/35 mt-2">Email address where contact form submissions will be sent</p>
                     </div>
                 </div>
             </motion.div>
@@ -212,11 +214,7 @@ export default function SocialLinksManager() {
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className={`px-8 py-3 font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
-                        saved
-                            ? 'bg-green-400 text-black'
-                            : 'bg-white text-black hover:bg-white/90'
-                    } disabled:opacity-50`}
+                    className="px-8 py-3 font-medium uppercase tracking-widest bg-white text-black hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] flex items-center gap-2 disabled:opacity-50"
                 >
                     <Save size={18} />
                     {isSaving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
@@ -228,10 +226,10 @@ export default function SocialLinksManager() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1 }}
-                className="mt-8 bg-white/5 border-2 border-white/20 p-6"
+                className="mt-8 bg-white/5 border border-white/15 p-6"
             >
-                <h2 className="text-xl font-bold mb-4 uppercase tracking-wider">&gt; Preview</h2>
-                <p className="text-sm text-white/60 mb-4">Enabled links will appear on the Contact page:</p>
+                <h2 className="text-xl mb-4 text-white" style={headingStyle}>Preview</h2>
+                <p className="text-sm text-white/50 mb-4">Enabled links will appear on the Contact page:</p>
                 <div className="flex flex-wrap gap-3">
                     {links.filter(link => link.enabled && link.url).map(link => (
                         <a
@@ -239,7 +237,7 @@ export default function SocialLinksManager() {
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-white text-black px-4 py-2 text-sm font-bold uppercase hover:bg-white/90 transition-colors flex items-center gap-2"
+                            className="bg-white text-black px-4 py-2 text-sm font-medium uppercase hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] flex items-center gap-2"
                         >
                             {link.id === 'instagram' && <Instagram size={16} />}
                             {link.name}
@@ -248,7 +246,7 @@ export default function SocialLinksManager() {
                     ))}
                 </div>
                 {links.filter(link => link.enabled && link.url).length === 0 && (
-                    <p className="text-white/40 text-sm">No enabled links yet</p>
+                    <p className="text-white/35 text-sm">No enabled links yet</p>
                 )}
             </motion.div>
 
@@ -256,9 +254,9 @@ export default function SocialLinksManager() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2 }}
-                className="mt-8 text-xs text-[#00ff88] border-t-2 border-white/10 pt-4 font-bold"
+                className="mt-8 text-xs text-white/35 border-t border-white/15 pt-4"
             >
-                <p>&gt; Data is live synchronized with Firestore database.</p>
+                <p>Data is live synchronized with Firestore database.</p>
             </motion.div>
         </div>
     );

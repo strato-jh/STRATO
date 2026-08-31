@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../firebaseAuth';
 import { motion } from 'motion/react';
 import { Terminal, Lock, Eye, EyeOff, X } from 'lucide-react';
+import { SANS, SERIF } from '../theme';
 
-const fontMono = "'Space Mono', monospace";
+const headingStyle = { fontFamily: SERIF, fontWeight: 400, letterSpacing: '-0.01em' } as const;
 
 export default function AdminLogin() {
     const navigate = useNavigate();
@@ -15,6 +16,14 @@ export default function AdminLogin() {
     const [error, setError] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    /* Already signed in (Firebase persists the session across tabs and
+     * restarts) — skip the form. */
+    useEffect(() => {
+        return onAuthStateChanged(auth, (user) => {
+            if (user) navigate('/admin/dashboard', { replace: true });
+        });
+    }, [navigate]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -22,8 +31,7 @@ export default function AdminLogin() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            sessionStorage.setItem('admin_auth', 'true');
-            navigate('/admin/dashboard');
+            navigate('/admin/dashboard', { replace: true });
         } catch (err) {
             setError(true);
         } finally {
@@ -32,36 +40,26 @@ export default function AdminLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ fontFamily: fontMono }}>
-            {/* Subtle grid background */}
-            <div className="absolute inset-0 opacity-5">
-                <div className="absolute inset-0" style={{
-                    backgroundImage: `repeating-linear-gradient(
-                        0deg,
-                        transparent,
-                        transparent 2px,
-                        white 2px,
-                        white 4px
-                    )`
-                }} />
-            </div>
-
+        <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ fontFamily: SANS }}>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
                 className="w-full max-w-md relative z-10"
             >
-                {/* Terminal header */}
-                <div className="bg-black border-2 border-white/20 shadow-[0_10px_50px_rgba(0,0,0,0.5)]">
-                    <div className="border-b-2 border-white/10 px-4 py-3 flex items-center justify-between bg-white/5">
+                {/* Login panel */}
+                <div className="bg-black border border-white/28">
+                    <div className="border-b border-white/15 px-4 py-3 flex items-center justify-between bg-white/5">
                         <div className="flex items-center gap-3">
                             <Terminal size={18} className="text-white" />
-                            <span className="text-sm uppercase tracking-widest">STRATO Admin Access</span>
+                            <span className="text-sm uppercase">
+                                <span className="font-extrabold tracking-[-0.01em]">STRATO</span>
+                                <span className="font-normal text-white/60 tracking-wide"> Admin Access</span>
+                            </span>
                         </div>
-                        <button 
+                        <button
                             onClick={() => navigate('/')}
-                            className="text-white/50 hover:text-white transition-colors p-1"
+                            className="text-white/50 hover:text-white transition-colors duration-200 ease-[var(--ease-btn)] p-1"
                             title="Close and return to site"
                         >
                             <X size={20} />
@@ -70,43 +68,43 @@ export default function AdminLogin() {
 
                     <div className="p-8">
                         <div className="space-y-6">
-                            <div className="text-sm">
-                                <p className="mb-2 text-white/80">&gt; RESTRICTED AREA</p>
-                                <p className="text-white/50">&gt; Authorization required to proceed...</p>
+                            <div>
+                                <h1 className="text-2xl mb-2 text-white" style={headingStyle}>Restricted area</h1>
+                                <p className="text-sm text-white/50">Authorization required to proceed.</p>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-xs mb-2 uppercase tracking-wider text-white/60">
-                                        &gt; Enter Email:
+                                    <label className="block text-xs mb-2 uppercase tracking-wider text-white/50">
+                                        Enter Email
                                     </label>
                                     <div className="relative mb-4">
-                                        <Terminal size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                                        <Terminal size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" />
                                         <input
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full bg-white/5 border-2 border-white/20 px-10 py-3 text-white outline-none focus:border-white/50 transition-all font-mono placeholder:text-white/30"
+                                            className="w-full bg-white/[0.04] border border-white/15 px-10 py-3 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] placeholder:text-white/35"
                                             placeholder="admin@strato.com"
                                             autoFocus
                                         />
                                     </div>
-                                    <label className="block text-xs mb-2 uppercase tracking-wider text-white/60">
-                                        &gt; Enter Password:
+                                    <label className="block text-xs mb-2 uppercase tracking-wider text-white/50">
+                                        Enter Password
                                     </label>
                                     <div className="relative">
-                                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                                        <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" />
                                         <input
                                             type={showPassword ? 'text' : 'password'}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full bg-white/5 border-2 border-white/20 px-10 py-3 text-white outline-none focus:border-white/50 transition-all font-mono placeholder:text-white/30"
+                                            className="w-full bg-white/[0.04] border border-white/15 px-10 py-3 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] placeholder:text-white/35"
                                             placeholder="**********"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 hover:text-white transition-colors duration-200 ease-[var(--ease-btn)]"
                                         >
                                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
@@ -117,16 +115,17 @@ export default function AdminLogin() {
                                     <motion.div
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="text-red-400 text-sm border-2 border-red-400/50 bg-red-400/10 px-4 py-2"
+                                        className="text-white text-sm font-semibold border border-white bg-white/5 px-4 py-2 flex items-center gap-2"
                                     >
-                                        &gt; ACCESS DENIED: Invalid credentials
+                                        <span className="w-1 h-1 bg-white shrink-0" />
+                                        ACCESS DENIED: Invalid credentials
                                     </motion.div>
                                 )}
 
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full bg-white text-black py-3 px-6 font-bold uppercase tracking-widest hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-white text-black py-3 px-6 font-medium uppercase tracking-widest hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {loading ? (
                                         <span className="flex items-center justify-center gap-2">
@@ -141,9 +140,9 @@ export default function AdminLogin() {
                                 </button>
                             </form>
 
-                            <div className="text-xs text-white/30 text-center pt-4 border-t border-white/10">
-                                <p>&gt; System Version: 2.1.4</p>
-                                <p>&gt; Last Login: Never</p>
+                            <div className="text-xs text-white/35 text-center pt-4 border-t border-white/15 space-y-0.5">
+                                <p>System Version: 2.1.4</p>
+                                <p>Last Login: Never</p>
                             </div>
                         </div>
                     </div>
@@ -154,9 +153,9 @@ export default function AdminLogin() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1 }}
-                    className="mt-4 text-center text-xs text-white/30"
+                    className="mt-4 text-center text-xs text-white/35"
                 >
-                    <p>// Please use registered Firebase Admin Account.</p>
+                    <p>Please use registered Firebase Admin Account.</p>
                 </motion.div>
             </motion.div>
         </div>
