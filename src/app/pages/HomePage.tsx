@@ -1952,15 +1952,15 @@ export default function HomePage() {
     const vis = useMemo(() => visibleProjects(projects, isUnlocked), [projects, isUnlocked]);
     const categories = useMemo(() => categoriesOf(projects), [projects]);
 
-    /* The still behind the hero while the clip buffers. An image set in the
-     * admin wins — it can be a frame from the clip itself, which makes the
-     * hand-over to video invisible. Otherwise fall back to the newest project
-     * that actually has a still; a video-only library has none, and showing
-     * nothing beats showing a broken image. */
-    const heroPoster = useMemo(
-        () => cHero.imageUrl ?? vis.map(posterFor).find(Boolean),
-        [cHero.imageUrl, vis],
-    );
+    /* The still behind the hero while the clip buffers — only ever the image
+     * set in the admin. There is deliberately no fallback: borrowing some
+     * unrelated project photo just flashes a picture nobody chose. Set it to a
+     * frame from the clip and the hand-over becomes invisible; leave it empty
+     * and the hero simply starts black. */
+    const heroPoster = cHero.imageUrl;
+
+    /** Fallback still for the studio section, which does need a picture. */
+    const firstProjectStill = useMemo(() => vis.map(posterFor).find(Boolean), [vis]);
     /* Hero clips: the two URLs set in admin win; otherwise fall back to the
      * first two project videos so the hero is never empty. */
     const heroVideos = useMemo(() => {
@@ -2030,7 +2030,7 @@ export default function HomePage() {
 
             <SectionA
                 bp={bp}
-                image={cCapabilities.imageUrl ?? heroPoster}
+                image={cCapabilities.imageUrl ?? firstProjectStill}
                 cards={cCapabilities.items}
             />
 
