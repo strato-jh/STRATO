@@ -363,6 +363,9 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
     const [clip, setClip] = useState(0);
     /** Indices allowed to buffer — the first clip immediately, others on cue. */
     const [warmed, setWarmed] = useState<number[]>([0]);
+    /** The clip being faded out from, held opaque underneath during handover. */
+    const [prev, setPrev] = useState<number | null>(null);
+    const lastActive = useRef(0);
 
     const count = Math.max(1, videoSrcs.length);
     const single = videoSrcs.length <= 1;
@@ -370,6 +373,16 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
 
     /* Reset to the first clip if the source list changes underneath us. */
     useEffect(() => { setClip(0); setWarmed([0]); }, [videoSrcs.join('|')]);
+
+    /* Hold the previous clip opaque for the length of the fade, then release
+     * it back to 0 so it is ready to fade in again on its next turn. */
+    useEffect(() => {
+        if (lastActive.current === active) return;
+        setPrev(lastActive.current);
+        lastActive.current = active;
+        const id = window.setTimeout(() => setPrev(null), 700);
+        return () => window.clearTimeout(id);
+    }, [active]);
 
     /* Only the visible clip plays, and it always restarts from the top —
      * otherwise the hidden one keeps running and comes back mid-shot. */
@@ -433,10 +446,16 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
                     style={{ background: '#000' }}
                 />
             )}
-            {/* Both clips stay mounted: the inactive one is buffered and ready,
-              * so the handover is a crossfade rather than a stall. */}
+            {/* The incoming clip fades in ON TOP of the outgoing one, which
+              * stays fully opaque underneath until the fade finishes. Fading
+              * both at once would dip their combined opacity mid-way and let
+              * the still behind them show through.
+              *
+              * No `poster` here either: a clip that has not buffered yet would
+              * paint that same still and reintroduce the flash. */}
             {videoSrcs.map((src, i) => {
                 const isActive = i === active;
+                const isOutgoing = i === prev;
                 return (
                     <video
                         key={src}
@@ -446,14 +465,14 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
                         loop={single}
                         muted
                         playsInline
-                        poster={poster}
                         preload={warmed.includes(i) ? 'auto' : 'none'}
                         onEnded={isActive ? onEnded : undefined}
                         className="absolute inset-0 w-full h-full object-cover"
                         style={{
                             transform: 'translateZ(0)',
                             willChange: 'transform, opacity',
-                            opacity: isActive ? 1 : 0,
+                            zIndex: isActive ? 2 : isOutgoing ? 1 : 0,
+                            opacity: isActive || isOutgoing ? 1 : 0,
                             transition: 'opacity 600ms linear',
                             pointerEvents: 'none',
                         }}
@@ -463,7 +482,7 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
 
             <div
                 style={{
-                    position: 'absolute', inset: 0, zIndex: 2,
+                    position: 'absolute', inset: 0, zIndex: 3,
                     display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center',
                     gap: 150,
                     padding: bpv(bp, '0 80px 80px', '0 50px 50px', '0 25px 40px'),
