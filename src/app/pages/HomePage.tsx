@@ -355,17 +355,21 @@ interface HeroProps {
 
 /** How long each hero clip is shown before handing over to the next one. */
 const HERO_CLIP_SECONDS = 10;
+/** How far ahead of the handover the next clip starts buffering. */
+const HERO_WARM_LEAD_SECONDS = 3;
 
 function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) {
     const videoEls = useRef<(HTMLVideoElement | null)[]>([]);
     const [clip, setClip] = useState(0);
+    /** Indices allowed to buffer — the first clip immediately, others on cue. */
+    const [warmed, setWarmed] = useState<number[]>([0]);
 
     const count = Math.max(1, videoSrcs.length);
     const single = videoSrcs.length <= 1;
     const active = clip % count;
 
     /* Reset to the first clip if the source list changes underneath us. */
-    useEffect(() => { setClip(0); }, [videoSrcs.join('|')]);
+    useEffect(() => { setClip(0); setWarmed([0]); }, [videoSrcs.join('|')]);
 
     /* Only the visible clip plays, and it always restarts from the top —
      * otherwise the hidden one keeps running and comes back mid-shot. */
@@ -386,6 +390,18 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
     useEffect(() => {
         if (single) return;
         const id = window.setTimeout(() => setClip((i) => (i + 1) % count), HERO_CLIP_SECONDS * 1000);
+        return () => window.clearTimeout(id);
+    }, [active, single, count]);
+
+    /* Only the visible clip downloads. The next one starts buffering a few
+     * seconds before its turn, so the first screen isn't competing with a
+     * second full-size file it will not show for another ten seconds. */
+    useEffect(() => {
+        if (single) return;
+        const id = window.setTimeout(
+            () => setWarmed((w) => (w.includes((active + 1) % count) ? w : [...w, (active + 1) % count])),
+            Math.max(0, HERO_CLIP_SECONDS - HERO_WARM_LEAD_SECONDS) * 1000,
+        );
         return () => window.clearTimeout(id);
     }, [active, single, count]);
 
@@ -430,7 +446,8 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
                         loop={single}
                         muted
                         playsInline
-                        preload="auto"
+                        poster={poster}
+                        preload={warmed.includes(i) ? 'auto' : 'none'}
                         onEnded={isActive ? onEnded : undefined}
                         className="absolute inset-0 w-full h-full object-cover"
                         style={{
@@ -868,11 +885,23 @@ function WorkCard({ project, bp, onOpen }: WorkCardProps) {
     const isVideo = project.mediaType === 'video' && !!project.imageUrl;
     const isYouTube = project.mediaType === 'youtube';
 
+    /* A card with a thumbnail shows the still and mounts nothing else. The
+     * <video> is only created on hover — otherwise every video card issues a
+     * range request against a full-size source just to paint one frame, which
+     * is tens of megabytes per card before the visitor has done anything. */
+    const [hovered, setHovered] = useState(false);
+    const hasStill = !!project.thumbnailUrl;
+    const showVideo = isVideo && (hovered || !hasStill);
+
     const onEnter = () => {
-        if (isVideo) videoEl.current?.play().catch(() => undefined);
+        if (!isVideo) return;
+        setHovered(true);
+        videoEl.current?.play().catch(() => undefined);
     };
     const onLeave = () => {
-        if (isVideo && videoEl.current) {
+        if (!isVideo) return;
+        setHovered(false);
+        if (videoEl.current) {
             videoEl.current.pause();
             videoEl.current.currentTime = 0;
         }
@@ -895,7 +924,7 @@ function WorkCard({ project, bp, onOpen }: WorkCardProps) {
             }}
         >
             <div style={{ width: '100%', aspectRatio: '16 / 10', overflow: 'hidden', background: PLACEHOLDER, position: 'relative' }}>
-                {isVideo ? (
+                {showVideo ? (
                     <video
                         ref={videoEl}
                         src={videoSrc(project.imageUrl)}
@@ -903,7 +932,8 @@ function WorkCard({ project, bp, onOpen }: WorkCardProps) {
                         muted
                         loop
                         playsInline
-                        preload="metadata"
+                        autoPlay={hovered}
+                        preload={hasStill ? 'none' : 'metadata'}
                         className="w-full h-full object-cover object-center transition-transform group-hover:scale-[1.06]"
                         style={{ transitionDuration: '550ms', transitionTimingFunction: EASE_ZOOM }}
                     />
