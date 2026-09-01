@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Upload, X, FolderOpen } from 'lucide-react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../firebaseStorage';
+import { STORAGE_CACHE_CONTROL } from '../../storageCache';
 import MediaLibraryPicker from './MediaLibraryPicker';
 
 /**
@@ -45,7 +46,7 @@ export default function UploadField({ kind, value, onChange, folder, placeholder
         setProgress(0);
         try {
             const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-            const task = uploadBytesResumable(fileRef, file);
+            const task = uploadBytesResumable(fileRef, file, { cacheControl: STORAGE_CACHE_CONTROL });
 
             await new Promise<void>((resolve, reject) => {
                 task.on(

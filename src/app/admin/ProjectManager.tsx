@@ -8,6 +8,7 @@ import { collection, addDoc, updateDoc, deleteDoc, onSnapshot, doc, query, order
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db } from '../../firebase';
 import { storage } from '../../firebaseStorage';
+import { STORAGE_CACHE_CONTROL } from '../../storageCache';
 import { SANS, SERIF } from '../theme';
 import { byDisplayOrder } from '../pages/useStratoData';
 
@@ -191,7 +192,7 @@ export default function ProjectManager() {
     const uploadFileToStorage = async (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const fileRef = ref(storage, `projects/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(fileRef, file);
+            const uploadTask = uploadBytesResumable(fileRef, file, { cacheControl: STORAGE_CACHE_CONTROL });
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
