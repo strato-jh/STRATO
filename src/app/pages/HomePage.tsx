@@ -422,7 +422,7 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
         <section
             ref={heroRef}
             style={{
-                position: 'relative', height: '100vh', width: '100%', overflow: 'hidden', background: '#282828',
+                position: 'relative', height: '100vh', width: '100%', overflow: 'hidden', background: '#000',
             }}
         >
             {poster && (
@@ -430,7 +430,7 @@ function Hero({ bp, title, sub, poster, videoSrcs, onCta, heroRef }: HeroProps) 
                     src={poster}
                     alt=""
                     className="absolute inset-0 w-full h-full object-cover object-center"
-                    style={{ background: '#282828' }}
+                    style={{ background: '#000' }}
                 />
             )}
             {/* Both clips stay mounted: the inactive one is buffered and ready,
@@ -1914,7 +1914,10 @@ export default function HomePage() {
     const vis = useMemo(() => visibleProjects(projects, isUnlocked), [projects, isUnlocked]);
     const categories = useMemo(() => categoriesOf(projects), [projects]);
 
-    const heroPoster = posterFor(vis[0]) ?? cHero.imageUrl;
+    /* The still behind the hero while the clip buffers. An image set in the
+     * admin wins — it can be a frame from the clip itself, which makes the
+     * hand-over to video invisible. The newest project is only a fallback. */
+    const heroPoster = cHero.imageUrl ?? posterFor(vis[0]);
     /* Hero clips: the two URLs set in admin win; otherwise fall back to the
      * first two project videos so the hero is never empty. */
     const heroVideos = useMemo(() => {
