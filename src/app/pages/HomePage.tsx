@@ -907,10 +907,28 @@ function WorkCard({ project, bp, onOpen }: WorkCardProps) {
     /* A card with a thumbnail shows the still and mounts nothing else. The
      * <video> is only created on hover — otherwise every video card issues a
      * range request against a full-size source just to paint one frame, which
-     * is tens of megabytes per card before the visitor has done anything. */
+     * is tens of megabytes per card before the visitor has done anything.
+     *
+     * A video with no thumbnail has nothing else to show, so it does mount a
+     * clip — but only once the card is near the viewport, so a long grid
+     * doesn't fire every request at once and get rate-limited. */
     const [hovered, setHovered] = useState(false);
+    const [inView, setInView] = useState(false);
+    const cardEl = useRef<HTMLElement | null>(null);
+
     const hasStill = !!project.thumbnailUrl;
-    const showVideo = isVideo && (hovered || !hasStill);
+    const showVideo = isVideo && (hovered || (!hasStill && inView));
+
+    useEffect(() => {
+        const el = cardEl.current;
+        if (!el || hasStill) return;
+        const io = new IntersectionObserver(
+            (entries) => entries.forEach((e) => { if (e.isIntersecting) setInView(true); }),
+            { rootMargin: '200px' },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, [hasStill]);
 
     const onEnter = () => {
         if (!isVideo) return;
@@ -928,6 +946,7 @@ function WorkCard({ project, bp, onOpen }: WorkCardProps) {
 
     return (
         <article
+            ref={cardEl}
             className="group"
             onClick={onOpen}
             onMouseEnter={onEnter}
@@ -1935,8 +1954,13 @@ export default function HomePage() {
 
     /* The still behind the hero while the clip buffers. An image set in the
      * admin wins — it can be a frame from the clip itself, which makes the
-     * hand-over to video invisible. The newest project is only a fallback. */
-    const heroPoster = cHero.imageUrl ?? posterFor(vis[0]);
+     * hand-over to video invisible. Otherwise fall back to the newest project
+     * that actually has a still; a video-only library has none, and showing
+     * nothing beats showing a broken image. */
+    const heroPoster = useMemo(
+        () => cHero.imageUrl ?? vis.map(posterFor).find(Boolean),
+        [cHero.imageUrl, vis],
+    );
     /* Hero clips: the two URLs set in admin win; otherwise fall back to the
      * first two project videos so the hero is never empty. */
     const heroVideos = useMemo(() => {

@@ -121,8 +121,11 @@ export function getYouTubeId(url?: string) {
 
 /** Poster/still image for a project regardless of media type. */
 export function posterOf(p: Project) {
-    if (p.mediaType === 'video') return p.thumbnailUrl || p.imageUrl;
-    return p.imageUrl;
+    /* For a video, `imageUrl` holds the video file — never fall back to it, or
+     * it ends up as the src of an <img> and renders as a broken image. A video
+     * without a thumbnail simply has no still. */
+    if (p.mediaType === 'video') return p.thumbnailUrl || undefined;
+    return p.thumbnailUrl || p.imageUrl;
 }
 
 /** Submit the contact form. Shared by all concepts. */
