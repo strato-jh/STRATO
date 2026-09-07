@@ -19,7 +19,7 @@ import type { Section } from './pages/useStratoData';
 export interface SectionItem {
     title: string;
     body: string;
-    /** Optional secondary line under the title — used for the Korean step name. */
+    /** Optional secondary line under the title. Hidden when blank. */
     label?: string;
     /** Optional image for this entry. Falls back to a project still when unset. */
     image?: string;
@@ -96,15 +96,15 @@ export const SECTION_DEFS: SectionDef[] = [
         defaults: {
             items: [
                 {
-                    title: '브랜드를 먼저 읽습니다.',
+                    title: 'We read the brand first.',
                     body: '무엇을 파는지가 아니라 어떻게 기억되고 싶은지를 먼저 정리합니다. 톤과 결을 잡은 뒤에 만들기 시작합니다.',
                 },
                 {
-                    title: '바로 쓸 수 있게 만듭니다.',
+                    title: 'Built ready to publish.',
                     body: '팝업, 캠페인, 상세 페이지까지 채널별 규격에 맞춰 그대로 올릴 수 있는 상태로 넘겨드립니다.',
                 },
                 {
-                    title: '할수록 빨라집니다.',
+                    title: 'Faster every round.',
                     body: '지난 작업에서 정한 기준과 피드백이 다음 작업의 출발점이 됩니다. 매번 처음부터 시작하지 않습니다.',
                 },
             ],
@@ -118,28 +118,26 @@ export const SECTION_DEFS: SectionDef[] = [
         itemsLabel: '작업 단계',
         maxItems: 6,
         defaults: {
-            title: '이렇게 만듭니다.',
+            title: 'How we build.',
             content:
-                '기획부터 완성까지 한 팀이 이어서 끌고 갑니다. 단계가 넘어가도 맥락이 끊기지 않습니다.',
+                'One team carries it from brief to delivery. Nothing gets lost between the stages.',
+            /* The English step name now lives in `title`, so the secondary
+             * `label` line it used to hold would only repeat it — left unset. */
             items: [
                 {
-                    title: '기획 · 브랜딩',
-                    label: 'Direction',
+                    title: 'Direction & Branding',
                     body: '레퍼런스와 브랜드 기준을 정리해 방향을 잡습니다. 무엇을 만들지가 여기서 결정됩니다.',
                 },
                 {
-                    title: '이미지 · 영상 생성',
-                    label: 'Generation',
+                    title: 'Image & Video Generation',
                     body: '정해진 방향 위에서 비주얼을 만들어냅니다. 쓰일 포맷과 채널을 처음부터 함께 고려합니다.',
                 },
                 {
-                    title: '후반 편집 · VFX',
-                    label: 'Post & VFX',
+                    title: 'Post & VFX',
                     body: '편집, 색보정, 합성으로 완성도를 끌어올립니다. 결과를 가르는 건 결국 디테일입니다.',
                 },
                 {
-                    title: '완성 · 전달',
-                    label: 'Delivery',
+                    title: 'Finish & Delivery',
                     body: '채널별 규격에 맞춰 정리해 넘겨드립니다. 받는 즉시 올릴 수 있는 상태입니다.',
                 },
             ],
@@ -151,7 +149,7 @@ export const SECTION_DEFS: SectionDef[] = [
         hint: '프로젝트 그리드 위에 붙는 짧은 제목',
         fields: ['title'],
         defaults: {
-            title: '그래서 이런 것들을 만들었습니다.',
+            title: 'So here’s what we made.',
         },
     },
     {
