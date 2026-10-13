@@ -320,8 +320,16 @@ export default function ProjectManager() {
                 }
             }
 
+            /* Put it in front of everything that has been placed by hand, so the
+             * new project is at the top of the list instead of past the end. */
+            const minOrder = projects.reduce(
+                (m, p) => (typeof p.order === 'number' && p.order < m ? p.order : m),
+                0,
+            );
+
             /* Same rule as the edit path: never let `undefined` reach Firestore. */
             await addDoc(collection(db, 'projects'), {
+                order: minOrder - 1,
                 title: newProject.title ?? '',
                 description: newProject.description ?? '',
                 imageUrl: finalImageUrl ?? '',

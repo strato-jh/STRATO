@@ -29,13 +29,20 @@ export interface Project {
 }
 
 /**
- * Display order: manually-ordered projects first (ascending), then anything
- * without an `order` yet, newest first. Kept here so the public site and the
- * admin list can never disagree about sequence.
+ * Display order: a project with no `order` yet has never been placed by hand,
+ * which means it was just added — it goes to the FRONT, newest first, so a new
+ * project is visible the moment it is saved. Manually-ordered projects follow
+ * in ascending order. Kept here so the public site and the admin list can
+ * never disagree about sequence.
  */
 export function byDisplayOrder(a: Project, b: Project) {
-    const ao = typeof a.order === 'number' ? a.order : Number.POSITIVE_INFINITY;
-    const bo = typeof b.order === 'number' ? b.order : Number.POSITIVE_INFINITY;
+    const ao = typeof a.order === 'number' ? a.order : null;
+    const bo = typeof b.order === 'number' ? b.order : null;
+    /* Both unplaced — newest first. Comparing two `Infinity`s here would give
+     * NaN, which is not a valid comparator result. */
+    if (ao === null && bo === null) return Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0);
+    if (ao === null) return -1;
+    if (bo === null) return 1;
     return ao - bo;
 }
 
