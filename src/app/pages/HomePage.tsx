@@ -1631,10 +1631,41 @@ interface MediaBlockProps {
     title?: string;
     /** CSS length capping the media height so a tall asset still fits one screen. */
     maxH: string;
+    /** Load immediately instead of waiting to be scrolled near. */
+    eager?: boolean;
 }
 
-function MediaBlock({ type, url, thumbnail, youtubeUrl, title, maxH }: MediaBlockProps) {
+function MediaBlock({ type, url, thumbnail, youtubeUrl, title, maxH, eager }: MediaBlockProps) {
     const ytId = getYouTubeId(youtubeUrl ?? url);
+    const el = useRef<HTMLVideoElement | null>(null);
+
+    /* A project can carry several large clips, all served from one host. Mounted
+     * together they queue against the browser's per-host connection limit, so the
+     * clip the viewer actually pressed play on waits behind the others fetching
+     * metadata. Only the first one reaches for its metadata up front; the rest
+     * sit at `preload="none"` until they are nearly on screen.
+     *
+     * `src` is always set, so this stays an optimisation: if the observer never
+     * reports (a hidden or non-painting tab), pressing play still loads the clip
+     * normally. */
+    const [near, setNear] = useState(!!eager);
+    useEffect(() => {
+        if (near || !el.current) return;
+        const io = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((e) => e.isIntersecting)) {
+                    setNear(true);
+                    io.disconnect();
+                }
+            },
+            { rootMargin: '300px' },
+        );
+        io.observe(el.current);
+        return () => io.disconnect();
+    }, [near]);
+
+    /* Until metadata arrives the element has no intrinsic size of its own. */
+    const [sized, setSized] = useState(false);
 
     /* Scale down to fit, never up: width follows the aspect ratio once the
      * height cap bites, so nothing is cropped or letterboxed. */
@@ -1670,12 +1701,20 @@ function MediaBlock({ type, url, thumbnail, youtubeUrl, title, maxH }: MediaBloc
     if (type === 'video' && url) {
         return (
             <video
+                ref={el}
                 src={videoSrc(url)}
                 poster={thumbnail}
                 controls
                 playsInline
-                preload="metadata"
-                style={{ ...fit, background: '#000' }}
+                preload={near ? 'metadata' : 'none'}
+                onLoadedMetadata={() => setSized(true)}
+                style={{
+                    ...fit,
+                    background: '#000',
+                    /* Hold a 16:9 box until the real dimensions are known, so the
+                     * page does not jump as each clip resolves. */
+                    ...(sized ? null : { width: '100%', aspectRatio: '16 / 9' }),
+                }}
             />
         );
     }
@@ -1784,6 +1823,7 @@ function ProjectOverlay({ bp, project, index, total, onClose, onPrev, onNext }: 
                             youtubeUrl={project.youtubeUrl}
                             title={project.title}
                             maxH={mediaMaxH}
+                            eager
                         />
                         {(project.additionalMedia ?? []).map((m, i) => (
                             <MediaBlock
@@ -2008,6 +2048,26 @@ export default function HomePage() {
         setSelectedId(openable[next].id);
     };
 
+    /* The detail view is state rather than a route, so without this Back would
+     * leave the site entirely. Give it a history entry of its own while it is
+     * open — keyed on open/closed, so stepping between projects does not stack
+     * up another entry per step. */
+    const overlayOpen = !!selected;
+    useEffect(() => {
+        if (!overlayOpen) return;
+        window.history.pushState({ stratoOverlay: true }, '');
+        const onPop = () => setSelectedId(null);
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, [overlayOpen]);
+
+    /* Closing by button or Escape goes back too, so the entry pushed on open is
+     * consumed rather than left on the stack for Back to land on later. */
+    const closeOverlay = useCallback(() => {
+        if (window.history.state?.stratoOverlay) window.history.back();
+        else setSelectedId(null);
+    }, []);
+
     return (
         <div style={{ background: '#000', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
             <NavBar
@@ -2085,7 +2145,7 @@ export default function HomePage() {
                     project={selected}
                     index={selectedIndex}
                     total={openable.length}
-                    onClose={() => setSelectedId(null)}
+                    onClose={closeOverlay}
                     onPrev={() => stepProject(-1)}
                     onNext={() => stepProject(1)}
                 />
