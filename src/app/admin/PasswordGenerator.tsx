@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Key, Copy, RefreshCw, Check, Lock, ShieldCheck } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { hashAccessCode } from '../pages/useStratoData';
+import { hashAccessCode, verifyAccessCode } from '../pages/useStratoData';
 import { SANS, SERIF } from '../theme';
 
 const headingStyle = { fontFamily: SERIF, fontWeight: 400, letterSpacing: '-0.01em' } as const;
@@ -53,6 +53,18 @@ export default function PasswordGenerator() {
         } finally {
             setMasterBusy(false);
         }
+    };
+
+    /* Check a code the same way the public site does, so a code that will not
+     * work can be found here rather than at the gate. */
+    const [probe, setProbe] = useState('');
+    const [probeResult, setProbeResult] = useState<'ok' | 'no' | null>(null);
+    const [probeBusy, setProbeBusy] = useState(false);
+
+    const testCode = async () => {
+        setProbeBusy(true);
+        setProbeResult(await verifyAccessCode(probe.trim()) ? 'ok' : 'no');
+        setProbeBusy(false);
     };
 
     const clearMaster = async () => {
@@ -378,6 +390,9 @@ export default function PasswordGenerator() {
                         value={master}
                         onChange={(e) => { setMaster(e.target.value); setMasterMsg(''); }}
                         placeholder={masterSet ? '새 마스터 코드 (8자 이상)' : '마스터 코드 (8자 이상)'}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-3 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] placeholder:text-white/35"
                     />
                     <button
@@ -403,6 +418,37 @@ export default function PasswordGenerator() {
                 <p className="mt-4 text-xs text-white/35">
                     코드는 해시로만 저장되어 다시 확인할 수 없습니다. 잊으면 새로 정하면 됩니다.
                 </p>
+
+                {/* Self-check — runs the same rule the public gate runs. */}
+                <div className="mt-6 pt-6 border-t border-white/15">
+                    <p className="text-sm text-white/50 mb-3">
+                        코드 확인 — 사이트에서와 똑같이 검사합니다. 마스터 코드와 발급 코드 모두 됩니다.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <input
+                            type="text"
+                            value={probe}
+                            onChange={(e) => { setProbe(e.target.value); setProbeResult(null); }}
+                            placeholder="확인할 코드"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-3 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] placeholder:text-white/35"
+                        />
+                        <button
+                            onClick={testCode}
+                            disabled={probeBusy || !probe.trim()}
+                            className="px-6 py-3 border border-white/28 text-white font-medium uppercase tracking-widest hover:border-white transition-colors duration-200 ease-[var(--ease-btn)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            확인
+                        </button>
+                    </div>
+                    {probeResult && (
+                        <p className="mt-3 text-sm text-white">
+                            {probeResult === 'ok' ? '✓ 이 코드로 열립니다.' : '✕ 이 코드로는 열리지 않습니다.'}
+                        </p>
+                    )}
+                </div>
             </motion.div>
 
             {/* Usage Guide */}

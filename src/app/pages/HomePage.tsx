@@ -1935,6 +1935,11 @@ function AccessModal({ bp, onClose, onUnlock }: AccessModalProps) {
                         onChange={(e) => { setCode(e.target.value); setError(''); }}
                         placeholder="접근 코드"
                         autoFocus
+                        /* A phone keyboard capitalises the first letter and
+                         * "corrects" the rest, which silently changes the code. */
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         style={{
                             fontFamily: SANS, fontWeight: 400, fontSize: 16, letterSpacing: '0.08em', color: '#000',
                             background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,.2)',
