@@ -145,15 +145,31 @@ export async function submitContact(data: { name: string; email: string; message
 }
 
 /**
+ * SHA-256 of a code, as lowercase hex.
+ *
+ * The master code is stored hashed rather than in the clear, because the
+ * settings document has to stay publicly readable for this check to run in the
+ * browser at all. A reader of the document learns the hash, not the code.
+ */
+export async function hashAccessCode(code: string) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+    return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+/**
  * Verify a gallery access code against Firestore.
  * Verification goes through settings/galleryAccess only — there is deliberately
- * no hardcoded bypass code. Codes are issued from Admin → Password Gen.
+ * no hardcoded bypass code. Both codes are managed in Admin → Password Gen:
+ * the master code, which does not expire, and the issued code, which does.
  */
 export async function verifyAccessCode(code: string) {
     try {
         const snap = await getDoc(doc(db, 'settings', 'galleryAccess'));
         if (!snap.exists()) return false;
         const data = snap.data();
+        if (data.masterHash && (await hashAccessCode(code)) === data.masterHash) return true;
         return code === data.currentPassword && Date.now() <= data.expiresAt;
     } catch {
         return false;

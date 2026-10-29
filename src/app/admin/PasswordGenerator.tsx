@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Key, Copy, RefreshCw, Check, Lock } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { Key, Copy, RefreshCw, Check, Lock, ShieldCheck } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { hashAccessCode } from '../pages/useStratoData';
 import { SANS, SERIF } from '../theme';
 
 const headingStyle = { fontFamily: SERIF, fontWeight: 400, letterSpacing: '-0.01em' } as const;
@@ -16,6 +17,57 @@ export default function PasswordGenerator() {
     const [includeSymbols, setIncludeSymbols] = useState(true);
     const [copied, setCopied] = useState(false);
     const [strength, setStrength] = useState('');
+
+    /* Master code — same gate, but no expiry. Stored as a hash. */
+    const [master, setMaster] = useState('');
+    const [masterSet, setMasterSet] = useState<boolean | null>(null);
+    const [masterBusy, setMasterBusy] = useState(false);
+    const [masterMsg, setMasterMsg] = useState('');
+
+    useEffect(() => {
+        getDoc(doc(db, 'settings', 'galleryAccess'))
+            .then((snap) => setMasterSet(!!snap.data()?.masterHash))
+            .catch(() => setMasterSet(false));
+    }, []);
+
+    const saveMaster = async () => {
+        const code = master.trim();
+        if (code.length < 8) {
+            setMasterMsg('8자 이상으로 정해 주세요.');
+            return;
+        }
+        setMasterBusy(true);
+        setMasterMsg('');
+        try {
+            /* merge, so issuing a code later does not wipe this one and vice versa. */
+            await setDoc(
+                doc(db, 'settings', 'galleryAccess'),
+                { masterHash: await hashAccessCode(code) },
+                { merge: true },
+            );
+            setMasterSet(true);
+            setMaster('');
+            setMasterMsg('저장했습니다. 이 코드는 만료되지 않습니다.');
+        } catch {
+            setMasterMsg('저장에 실패했습니다.');
+        } finally {
+            setMasterBusy(false);
+        }
+    };
+
+    const clearMaster = async () => {
+        setMasterBusy(true);
+        setMasterMsg('');
+        try {
+            await setDoc(doc(db, 'settings', 'galleryAccess'), { masterHash: '' }, { merge: true });
+            setMasterSet(false);
+            setMasterMsg('마스터 코드를 해제했습니다.');
+        } catch {
+            setMasterMsg('해제에 실패했습니다.');
+        } finally {
+            setMasterBusy(false);
+        }
+    };
 
     const generatePassword = async () => {
         let charset = '';
@@ -40,10 +92,14 @@ export default function PasswordGenerator() {
         calculateStrength(generatedPassword);
 
         try {
-            await setDoc(doc(db, 'settings', 'galleryAccess'), {
-                currentPassword: generatedPassword,
-                expiresAt: Date.now() + 24 * 60 * 60 * 1000
-            });
+            await setDoc(
+                doc(db, 'settings', 'galleryAccess'),
+                {
+                    currentPassword: generatedPassword,
+                    expiresAt: Date.now() + 24 * 60 * 60 * 1000
+                },
+                { merge: true },
+            );
         } catch (error) {
             console.error("Failed to save password to Firestore", error);
         }
@@ -103,7 +159,7 @@ export default function PasswordGenerator() {
                     <Key size={28} className="text-white" />
                     Password Generator
                 </motion.h1>
-                <p className="text-sm text-white/50">비공개 프로젝트를 열람할 수 있는 접근 코드를 발급합니다 (유효기간 24시간)</p>
+                <p className="text-sm text-white/50">비공개 프로젝트를 열람할 수 있는 접근 코드를 관리합니다</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -289,6 +345,66 @@ export default function PasswordGenerator() {
                 </motion.div>
             </div>
 
+            {/* Master code — the one that does not expire */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6 bg-white/5 border border-white/15 p-6"
+            >
+                <h2 className="text-lg mb-1 flex items-center gap-2 text-white" style={headingStyle}>
+                    <ShieldCheck size={18} />
+                    마스터 코드
+                </h2>
+                <p className="text-sm text-white/50 mb-4">
+                    직접 정하는 고정 코드입니다. 만료되지 않고, 위에서 코드를 새로 발급해도 그대로 쓸 수 있습니다.
+                </p>
+
+                <div className="mb-3 text-sm">
+                    {masterSet === null ? (
+                        <span className="text-white/35">확인 중…</span>
+                    ) : masterSet ? (
+                        <span className="inline-flex items-center gap-2 text-white">
+                            <Check size={15} /> 설정되어 있습니다
+                        </span>
+                    ) : (
+                        <span className="text-white/50">아직 설정되지 않았습니다</span>
+                    )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                        type="text"
+                        value={master}
+                        onChange={(e) => { setMaster(e.target.value); setMasterMsg(''); }}
+                        placeholder={masterSet ? '새 마스터 코드 (8자 이상)' : '마스터 코드 (8자 이상)'}
+                        className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-3 text-white outline-none focus:border-white/50 transition-colors duration-200 ease-[var(--ease-btn)] placeholder:text-white/35"
+                    />
+                    <button
+                        onClick={saveMaster}
+                        disabled={masterBusy || master.trim().length < 8}
+                        className="px-6 py-3 bg-white text-black font-medium uppercase tracking-widest hover:bg-white/85 transition-colors duration-200 ease-[var(--ease-btn)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {masterSet ? '변경' : '저장'}
+                    </button>
+                    {masterSet && (
+                        <button
+                            onClick={clearMaster}
+                            disabled={masterBusy}
+                            className="px-6 py-3 border border-white/28 text-white font-medium uppercase tracking-widest hover:border-white transition-colors duration-200 ease-[var(--ease-btn)] disabled:opacity-50"
+                        >
+                            해제
+                        </button>
+                    )}
+                </div>
+
+                {masterMsg && <p className="mt-3 text-sm text-white">{masterMsg}</p>}
+
+                <p className="mt-4 text-xs text-white/35">
+                    코드는 해시로만 저장되어 다시 확인할 수 없습니다. 잊으면 새로 정하면 됩니다.
+                </p>
+            </motion.div>
+
             {/* Usage Guide */}
             <motion.div
                 initial={{ opacity: 0 }}
@@ -304,7 +420,8 @@ export default function PasswordGenerator() {
                     <ul className="list-none space-y-1 ml-4">
                         <li>• 사이트의 자물쇠 아이콘을 눌러 입력하면 잠긴 작업물이 표시됩니다</li>
                         <li>• 저장하면 이전 코드는 즉시 무효가 됩니다</li>
-                        <li>• <strong className="text-white">유효기간은 발급 후 24시간</strong>이며, 지나면 다시 발급해야 합니다</li>
+                        <li>• <strong className="text-white">발급 코드의 유효기간은 24시간</strong>이며, 지나면 다시 발급해야 합니다</li>
+                        <li>• <strong className="text-white">마스터 코드</strong>는 만료되지 않습니다. 발급 코드와 둘 다 사용할 수 있습니다</li>
                     </ul>
                     <p className="mt-4 text-white/35 text-xs">
                         관리자 로그인 비밀번호와는 별개입니다. 관리자 계정은 Firebase Authentication에서 관리합니다.
